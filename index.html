@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mission to Eros</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#070b24;--panel:rgba(14,22,58,.92);--line:rgba(140,170,255,.25);--amber:#ffc44d;--cyan:#5ee0ff;--green:#5df29a;--red:#ff6b6b;--text:#eef2ff;--muted:#a9b4dd}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+  button{touch-action:manipulation}
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Baloo 2',system-ui,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none}
+  canvas{display:block;position:fixed;inset:0}
+  #hud{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:12px 16px;pointer-events:none;gap:12px}
+  .chip{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 14px;font-weight:700;font-size:16px;line-height:1.2}
+  .chip small{display:block;font-weight:500;font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+  #hudR{display:flex;gap:8px}
+  #event{position:fixed;top:74px;left:50%;transform:translateX(-50%) translateY(-10px);max-width:min(560px,92vw);background:linear-gradient(135deg,#23306f,#14205a);border:2px solid var(--amber);border-radius:18px;padding:10px 18px;font-size:17px;line-height:1.35;opacity:0;transition:.35s;pointer-events:none;text-align:center}
+  #event b{color:var(--amber)}
+  #event.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #fact{position:fixed;left:16px;bottom:60px;max-width:min(380px,70vw);background:var(--panel);border:2px solid var(--cyan);border-radius:18px;padding:10px 16px;font-size:16px;line-height:1.35;opacity:0;transform:translateY(12px);transition:.3s;pointer-events:none}
+  .meter{height:5px;border-radius:3px;background:rgba(255,255,255,.12);margin-top:4px;overflow:hidden;min-width:70px}.meter i{display:block;height:100%;background:var(--cyan);transition:width .2s}
+  #fact .t{color:var(--cyan);font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+  #fact.show{opacity:1;transform:none}
+  #overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(4,7,25,.55);backdrop-filter:blur(3px);padding:16px}
+  #overlay.show{display:flex}
+  #overlay.milestone{align-items:flex-end;background:linear-gradient(to top,rgba(4,7,25,.8),rgba(4,7,25,.1) 60%);backdrop-filter:none;padding-bottom:max(24px,env(safe-area-inset-bottom))}
+  #overlay.milestone .card{max-width:560px}
+  .card{background:linear-gradient(160deg,#1a2564,#0f1745);border:2px solid var(--line);border-radius:26px;padding:26px 28px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:pop .3s ease}
+  @keyframes pop{from{transform:scale(.9);opacity:0}to{transform:none;opacity:1}}
+  .card .kicker{color:var(--amber);font-weight:700;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
+  .card h1{font-size:40px;line-height:1.05;margin:4px 0 10px;font-weight:800}
+  .card h2{font-size:28px;line-height:1.1;margin:4px 0 10px;font-weight:800}
+  .card p{font-size:18px;line-height:1.45;color:#d9e0ff;margin-bottom:10px}
+  .card ul{margin:6px 0 12px 20px;font-size:17px;line-height:1.45;color:#d9e0ff}
+  .card .big{font-size:52px;line-height:1;margin-bottom:6px}
+  .btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  button.b{font:inherit;font-weight:800;font-size:19px;border:0;border-radius:16px;padding:10px 22px;cursor:pointer;background:var(--amber);color:#2a1a00;box-shadow:0 4px 0 #b9831a;transition:transform .1s}
+  button.b:active{transform:translateY(3px);box-shadow:0 1px 0 #b9831a}
+  button.b.ghost{background:transparent;color:var(--text);border:2px solid var(--line);box-shadow:none;font-size:15px;padding:6px 14px}
+  .jump{margin-top:14px;font-size:14px;color:var(--muted)}
+  #pad{position:fixed;left:0;right:0;bottom:0;display:none;justify-content:space-between;align-items:flex-end;padding:0 14px calc(14px + env(safe-area-inset-bottom));pointer-events:none}
+  #pad.show{display:flex}
+  #pad .lr{display:flex;gap:10px}
+  #pad button{pointer-events:auto;font:inherit;font-size:28px;font-weight:800;width:72px;height:72px;border-radius:22px;border:2px solid var(--line);background:rgba(20,30,80,.8);color:var(--text);touch-action:none}
+  #pad button.thr{width:150px;font-size:22px;background:rgba(255,196,77,.18);border-color:var(--amber);color:var(--amber)}
+  #pad button.on{background:var(--amber);color:#2a1a00}
+  #hint{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 14px;font-size:15px;color:var(--muted);pointer-events:none;display:none;white-space:nowrap}
+  #hint.show{display:block}
+  #landBtn{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:none}
+  @media (max-width:640px){.card h1{font-size:32px}.card p{font-size:16px}#pad button{width:64px;height:64px}#pad button.thr{width:130px}.chip{font-size:14px;padding:4px 10px}.chip small{font-size:10px}#hudL{display:none}#hud{padding:10px}#hudR{gap:6px}#event{top:66px;font-size:15px}#hint{font-size:13px;bottom:12px}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud" style="display:none">
+  <div class="chip" id="hudL"><small>Stage</small><span></span></div>
+  <div id="hudR"></div>
+</div>
+<div id="event"></div>
+<div id="fact"><div class="t">&#129514; Fact unlocked!</div><div class="x"></div></div>
+<div id="hint"></div>
+<button class="b" id="landBtn">Prepare to land &rarr;</button>
+<div id="pad">
+  <div class="lr"><button data-k="left">&#9664;</button><button data-k="right">&#9654;</button></div>
+  <button class="thr" data-k="up">&#128293; Thrust</button>
+</div>
+<div id="overlay"></div>
+
+<script>
+// ---------- setup ----------
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+let W = 0, H = 0, stage = 0, last = performance.now(), paused = true;
+const $ = id => document.getElementById(id);
+
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const lerp=(a,b,t)=>a+(b-a)*t, clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+function resize(){
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  W = innerWidth; H = innerHeight;
+  cv.width = W*dpr; cv.height = H*dpr;
+  cv.style.width = W+'px'; cv.style.height = H+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+addEventListener('resize', resize); resize();
+
+// ---------- input ----------
+const keys = {up:false,down:false,left:false,right:false};
+const keymap = {ArrowUp:'up',KeyW:'up',Space:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};
+addEventListener('keydown', e=>{ if(keymap[e.code]){keys[keymap[e.code]]=true; e.preventDefault();} });
+addEventListener('keyup', e=>{ if(keymap[e.code]) keys[keymap[e.code]]=false; });
+document.querySelectorAll('#pad button').forEach(b=>{
+  const k=b.dataset.k;
+  const on=e=>{e.preventDefault();keys[k]=true;b.classList.add('on');audioInit();};
+  const off=e=>{e.preventDefault();keys[k]=false;b.classList.remove('on');};
+  b.addEventListener('pointerdown',on); b.addEventListener('pointerup',off);
+  b.addEventListener('pointerleave',off); b.addEventListener('pointercancel',off);
+});
+const isTouch = matchMedia('(pointer:coarse)').matches;
+// iOS: stop long-press text selection, magnifier, callout menu and double-tap zoom
+const noTouchDefault = e => { if(e.touches && e.touches.length>1) return; e.preventDefault(); };
+cv.addEventListener('touchstart', noTouchDefault, {passive:false});
+cv.addEventListener('touchmove', noTouchDefault, {passive:false});
+$('pad').addEventListener('touchstart', noTouchDefault, {passive:false});
+$('pad').addEventListener('touchmove', noTouchDefault, {passive:false});
+['selectstart','contextmenu','dragstart'].forEach(n=>document.addEventListener(n, e=>e.preventDefault()));
+document.addEventListener('gesturestart', e=>e.preventDefault());
+
+// ---------- audio ----------
+let AC=null, thrustGain=null;
+function audioInit(){
+  if(AC) return;
+  try{
+    AC = new (window.AudioContext||window.webkitAudioContext)();
+    const len = AC.sampleRate*1, buf = AC.createBuffer(1,len,AC.sampleRate), d = buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
+    const src = AC.createBufferSource(); src.buffer=buf; src.loop=true;
+    const f = AC.createBiquadFilter(); f.type='lowpass'; f.frequency.value=380;
+    thrustGain = AC.createGain(); thrustGain.gain.value=0;
+    src.connect(f); f.connect(thrustGain); thrustGain.connect(AC.destination); src.start();
+  }catch(e){AC=null}
+}
+function beep(freq=660,dur=.12,type='sine',vol=.12){
+  if(!AC) return;
+  try{
+    const o=AC.createOscillator(), g=AC.createGain(); o.type=type; o.frequency.value=freq;
+    g.gain.setValueAtTime(vol,AC.currentTime); g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+dur);
+    o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime+dur);
+  }catch(e){}
+}
+function chime(){beep(660,.12);setTimeout(()=>beep(990,.18),90)}
+function setThrust(v){ if(thrustGain) thrustGain.gain.setTargetAtTime(v?0.18:0, AC.currentTime, .05); }
+
+// ---------- UI helpers ----------
+function showCard(html, buttons, cls){
+  const o=$('overlay'); o.className=cls||'';
+  o.innerHTML = `<div class="card">${html}<div class="btns"></div></div>`;
+  const bx=o.querySelector('.btns');
+  (buttons||[]).forEach(b=>{
+    const el=document.createElement('button'); el.className='b'+(b.ghost?' ghost':''); el.innerHTML=b.label;
+    el.onclick=()=>{audioInit(); beep(520,.08); if(!b.keep) hideCard(); b.fn&&b.fn();};
+    bx.appendChild(el);
+  });
+  o.classList.add('show'); paused=true;
+}
+function hideCard(){ $('overlay').className=''; paused=false; last=performance.now(); }
+let evT=null, factT=null;
+function eventMsg(html,ms=5200){ const e=$('event'); e.innerHTML=html; e.classList.add('show'); clearTimeout(evT); evT=setTimeout(()=>e.classList.remove('show'),ms); }
+function factMsg(html,ms=6500){ const f=$('fact'); f.querySelector('.x').innerHTML=html; f.classList.add('show'); clearTimeout(factT); factT=setTimeout(()=>f.classList.remove('show'),ms); }
+function clearMsgs(){ $('event').classList.remove('show'); $('fact').classList.remove('show'); }
+function setHUD(label, right){
+  $('hud').style.display='flex';
+  $('hudL').querySelector('span').textContent = label;
+  $('hudR').innerHTML = right;
+}
+function hint(t){ const h=$('hint'); if(t){h.textContent=t;h.classList.add('show')} else h.classList.remove('show'); }
+
+// ---------- stars ----------
+const SR = rng(7), STARS = Array.from({length:260},()=>({x:SR(),y:SR(),z:.2+SR()*.8,tw:SR()*6.28}));
+function drawStars(dx=0, t=0){
+  for(const s of STARS){
+    let x = ((s.x - dx*s.z)%1+1)%1 * W, y = s.y*H;
+    const a = .35 + .65*s.z*(.75+.25*Math.sin(t*2+s.tw));
+    ctx.fillStyle=`rgba(220,230,255,${a})`;
+    const r = s.z*1.6;
+    ctx.fillRect(x,y,r,r);
+  }
+}
+function bg(){
+  const g=ctx.createRadialGradient(W*.7,H*.3,0,W*.5,H*.5,Math.max(W,H));
+  g.addColorStop(0,'#141c4d'); g.addColorStop(1,'#050817');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+}
+
+// ---------- Eros model (normalized: length 2, x in [-1,1]) ----------
+const EROS = (()=>{
+  const r = rng(433);
+  const N=180, pts=[];
+  for(let i=0;i<N;i++){
+    const a=i/N*Math.PI*2, x=Math.cos(a);
+    let y=Math.sin(a)*0.42*(1-0.36*Math.exp(-(x*x)/0.07));
+    const n=1+0.03*Math.sin(5*a+1)+0.018*Math.sin(11*a+2)+0.012*Math.sin(19*a+.5);
+    pts.push([x*n, y*n]);
+  }
+  const hh = x => 0.42*Math.sqrt(Math.max(0,1-x*x))*(1-0.36*Math.exp(-(x*x)/0.07));
+  const craters=[];
+  for(let i=0;i<70;i++){
+    const x=-0.92+r()*1.84, lim=hh(x)*0.85, y=(r()*2-1)*lim, rad=0.012+Math.pow(r(),3)*0.06;
+    craters.push({x,y,r:rad});
+  }
+  craters.push({x:-0.45,y:-0.02,r:0.15,big:true});           // Psyche
+  craters.push({x:-0.74,y:0.09,r:0.06,pond:true});            // pond crater
+  const boulders=[];
+  for(let i=0;i<120;i++){
+    const x=-0.95+r()*1.9, lim=hh(x)*0.9, y=(r()*2-1)*lim;
+    boulders.push({x,y,r:0.003+r()*0.006});
+  }
+  for(let i=0;i<26;i++){ // a cluster near the boulder hotspot
+    boulders.push({x:0.5+(r()-.5)*0.16,y:0.12+(r()-.5)*0.12,r:0.005+r()*0.011});
+  }
+  return {pts,craters,boulders,hh};
+})();
+
+function erosPath(s){
+  ctx.beginPath();
+  EROS.pts.forEach(([x,y],i)=> i? ctx.lineTo(x*s,y*s) : ctx.moveTo(x*s,y*s));
+  ctx.closePath();
+}
+function drawEros(cx,cy,s,rot=0,detail=true){
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot);
+  // glow
+  if(s>30){ctx.shadowColor='rgba(255,200,140,.25)'; ctx.shadowBlur=s*.15;}
+  erosPath(s);
+  const g=ctx.createLinearGradient(-s*.6,-s*.5,s*.6,s*.5);
+  g.addColorStop(0,'#e3c597'); g.addColorStop(.55,'#a8865f'); g.addColorStop(1,'#4c3a29');
+  ctx.fillStyle=g; ctx.fill(); ctx.shadowBlur=0;
+  if(detail && s>18){
+    ctx.save(); erosPath(s); ctx.clip();
+    // ridge (Rahe Dorsum-style long ridge)
+    ctx.strokeStyle='rgba(255,236,200,.35)'; ctx.lineWidth=Math.max(1,s*.012);
+    ctx.beginPath(); ctx.moveTo(s*0.12,-s*0.26); ctx.quadraticCurveTo(s*0.45,-s*0.2,s*0.82,s*0.06); ctx.stroke();
+    ctx.strokeStyle='rgba(40,25,10,.35)'; ctx.lineWidth=Math.max(1,s*.008);
+    ctx.beginPath(); ctx.moveTo(s*0.13,-s*0.25+s*.012); ctx.quadraticCurveTo(s*0.46,-s*0.19+s*.012,s*0.83,s*0.07+s*.01); ctx.stroke();
+    // craters
+    for(const c of EROS.craters){
+      const x=c.x*s,y=c.y*s,r=c.r*s; if(r<0.8) continue;
+      ctx.fillStyle = c.pond ? 'rgba(190,160,120,.9)' : 'rgba(60,42,26,.45)';
+      ctx.beginPath(); ctx.ellipse(x,y,r,r*.9,0,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='rgba(255,235,200,.35)'; ctx.lineWidth=Math.max(.6,r*.18);
+      ctx.beginPath(); ctx.ellipse(x,y,r,r*.9,0,Math.PI*.1,Math.PI*.95); ctx.stroke();
+      ctx.strokeStyle='rgba(30,18,8,.45)';
+      ctx.beginPath(); ctx.ellipse(x,y,r,r*.9,0,Math.PI*1.1,Math.PI*1.95); ctx.stroke();
+      if(c.pond){ctx.fillStyle='rgba(225,200,160,.9)';ctx.beginPath();ctx.ellipse(x,y+r*.15,r*.6,r*.4,0,0,Math.PI*2);ctx.fill();}
+    }
+    // boulders
+    if(s>120) for(const b of EROS.boulders){
+      const x=b.x*s,y=b.y*s,r=Math.max(.8,b.r*s);
+      ctx.fillStyle='rgba(245,225,190,.8)'; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(20,12,5,.55)'; ctx.beginPath(); ctx.arc(x+r*.6,y+r*.6,r*.8,0,Math.PI*2); ctx.fill();
+    }
+    // shading (night side)
+    const sh=ctx.createLinearGradient(-s*.3,-s*.3,s*1.0,s*.5);
+    sh.addColorStop(0,'rgba(0,0,0,0)'); sh.addColorStop(.7,'rgba(0,0,10,.25)'); sh.addColorStop(1,'rgba(0,0,10,.7)');
+    ctx.fillStyle=sh; ctx.fillRect(-s*1.2,-s,s*2.4,s*2);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+// ---------- NEAR spacecraft ----------
+function drawNEAR(x,y,s,rot=0,flame=0,flameDir='back'){
+  ctx.save(); ctx.translate(x,y); ctx.rotate(rot);
+  // flame
+  if(flame>0){
+    const fl = s*(0.6+Math.random()*.5)*flame;
+    ctx.fillStyle='rgba(255,170,60,.9)';
+    ctx.beginPath();
+    if(flameDir==='back'){ctx.moveTo(-s*.45,-s*.15);ctx.lineTo(-s*.45-fl,0);ctx.lineTo(-s*.45,s*.15);}
+    else {ctx.moveTo(-s*.15,s*.45);ctx.lineTo(0,s*.45+fl);ctx.lineTo(s*.15,s*.45);}
+    ctx.fill();
+    ctx.fillStyle='rgba(255,240,180,.9)';
+    ctx.beginPath();
+    if(flameDir==='back'){ctx.moveTo(-s*.45,-s*.07);ctx.lineTo(-s*.45-fl*.5,0);ctx.lineTo(-s*.45,s*.07);}
+    else {ctx.moveTo(-s*.07,s*.45);ctx.lineTo(0,s*.45+fl*.5);ctx.lineTo(s*.07,s*.45);}
+    ctx.fill();
+  }
+  // solar panels (4, like NEAR)
+  const panel=(px,py,w,h)=>{
+    ctx.fillStyle='#1d3f9a'; ctx.fillRect(px,py,w,h);
+    ctx.strokeStyle='#6fa0ff'; ctx.lineWidth=Math.max(.6,s*.03); ctx.strokeRect(px,py,w,h);
+    ctx.beginPath(); for(let i=1;i<3;i++){ctx.moveTo(px+w*i/3,py);ctx.lineTo(px+w*i/3,py+h);} ctx.stroke();
+  };
+  ctx.strokeStyle='#bfc6d8'; ctx.lineWidth=Math.max(1,s*.05);
+  ctx.beginPath(); ctx.moveTo(-s*1.25,0); ctx.lineTo(s*1.25,0); ctx.moveTo(0,-s*1.25); ctx.lineTo(0,s*1.0); ctx.stroke();
+  panel(-s*1.35,-s*.18,s*.85,s*.36); panel(s*.5,-s*.18,s*.85,s*.36);
+  panel(-s*.18,-s*1.35,s*.36,s*.85);
+  // body (octagon, gold foil)
+  ctx.beginPath();
+  for(let i=0;i<8;i++){const a=Math.PI/8+i*Math.PI/4; ctx.lineTo(Math.cos(a)*s*.5,Math.sin(a)*s*.5);}
+  ctx.closePath();
+  const g=ctx.createLinearGradient(-s*.5,-s*.5,s*.5,s*.5); g.addColorStop(0,'#ffe08a'); g.addColorStop(1,'#c58a1c');
+  ctx.fillStyle=g; ctx.fill(); ctx.strokeStyle='#7a5208'; ctx.lineWidth=Math.max(.8,s*.04); ctx.stroke();
+  // antenna dish
+  ctx.fillStyle='#f4f6fb'; ctx.beginPath(); ctx.arc(0,0,s*.26,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#c9cfdd'; ctx.beginPath(); ctx.arc(0,0,s*.07,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawRock(x,y,r,rot,seed,col='#8b8f9c'){
+  const R=rng(seed); ctx.save(); ctx.translate(x,y); ctx.rotate(rot);
+  ctx.beginPath(); for(let i=0;i<9;i++){const a=i/9*Math.PI*2, rr=r*(.7+R()*.35); ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);} ctx.closePath();
+  ctx.fillStyle=col; ctx.fill(); ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); ctx.arc(r*.2,r*.15,r*.25,0,7); ctx.fill();
+  ctx.restore();
+}
+const FLASK_COLORS=['#5ee0ff','#5df29a','#ff7ad9','#b18cff','#ffc44d'];
+function drawFlask(x,y,r,t,seed){
+  const col=FLASK_COLORS[seed%FLASK_COLORS.length];
+  ctx.save(); ctx.translate(x,y); ctx.rotate(Math.sin(t*2)*.25);
+  const nw=r*.32, nt=-r*1.05, nb=-r*.35, bw=r*.9, bb=r*.85;
+  const body=()=>{ctx.beginPath(); ctx.moveTo(-nw,nt); ctx.lineTo(-nw,nb); ctx.lineTo(-bw,bb-r*.12); ctx.quadraticCurveTo(-bw,bb,-bw+r*.15,bb); ctx.lineTo(bw-r*.15,bb); ctx.quadraticCurveTo(bw,bb,bw,bb-r*.12); ctx.lineTo(nw,nb); ctx.lineTo(nw,nt); ctx.closePath();};
+  // glow + glass
+  ctx.shadowColor=col; ctx.shadowBlur=18;
+  body(); ctx.fillStyle='rgba(220,240,255,.18)'; ctx.fill(); ctx.shadowBlur=0;
+  // liquid
+  ctx.save(); body(); ctx.clip();
+  const ly=r*.15+Math.sin(t*4)*r*.05;
+  ctx.fillStyle=col; ctx.globalAlpha=.9; ctx.fillRect(-bw,ly,bw*2,bb-ly+2);
+  ctx.globalAlpha=1; ctx.fillStyle='rgba(255,255,255,.75)';
+  for(let i=0;i<3;i++){const bt=(t*1.2+i/3)%1; ctx.beginPath(); ctx.arc((i-1)*r*.3, lerp(bb-r*.1,ly,bt), r*.08*(1-bt*.4),0,7); ctx.fill();}
+  ctx.restore();
+  // outline, rim, shine
+  body(); ctx.strokeStyle='rgba(235,248,255,.95)'; ctx.lineWidth=Math.max(1.5,r*.1); ctx.lineJoin='round'; ctx.stroke();
+  ctx.fillStyle='rgba(235,248,255,.95)'; ctx.fillRect(-nw*1.35,nt-r*.12,nw*2.7,r*.16);
+  ctx.strokeStyle='rgba(255,255,255,.6)'; ctx.lineWidth=Math.max(1,r*.07); ctx.beginPath(); ctx.moveTo(-bw*.55,bb-r*.25); ctx.lineTo(-nw*.6,nb+r*.05); ctx.stroke();
+  ctx.restore();
+}
+
+// =====================================================================
+// STAGE 1: APPROACH
+// =====================================================================
+const STARS_PER_FACT = 10;
+const S1_FACTS = [
+  "<b>Asteroids</b> are rocky leftovers from when the planets formed, about <b>4.5 billion years</b> ago.",
+  "Most asteroids live in the <b>asteroid belt</b> between Mars and Jupiter. Eros is a <b>near-Earth asteroid</b> — its path comes closer to us.",
+  "Asteroids aren't round like planets. They're too small for gravity to squeeze them into balls, so they're lumpy!",
+  "<b>Eros</b> is shaped a bit like a <b>peanut</b> and is about <b>34 km (21 miles)</b> long — as long as a big city.",
+  "NEAR stands for <b>Near Earth Asteroid Rendezvous</b>. It was later named after scientist <b>Gene Shoemaker</b>.",
+  "NEAR carried a camera, a laser to measure height, and tools to sniff out what Eros is made of.",
+  "Eros is about as dense as the rocks in <b>Earth's crust</b>.",
+  "Space is huge! At one point Eros and NEAR were about <b>355 million km</b> from Earth."
+];
+let s1, drag1=null;
+cv.addEventListener('pointerdown',e=>{ if(stage===1&&!paused){ drag1={x:e.clientX,y:e.clientY,touch:e.pointerType!=='mouse'}; } });
+cv.addEventListener('pointermove',e=>{ if(drag1) { drag1.x=e.clientX; drag1.y=e.clientY; } });
+['pointerup','pointercancel','pointerleave'].forEach(n=>cv.addEventListener(n,()=>{ drag1=null; }));
+function startStage1(){
+  stage=1; clearMsgs(); hint(null); $('landBtn').style.display='none';
+  $('pad').classList.remove('show');
+  s1={t:0,dur:62,x:W*.22,y:H*.55,vx:0,vy:0,objs:[],pops:[],boost:0,scroll:0,ep:0,fly:[],spawn:1.2,score:0,fi:0,hit:0,events:new Set(),done:false};
+  showCard(`<div class="kicker">Stage 1 of 3</div><h2>Approach Eros</h2>
+    <p>You're the pilot of <b>NEAR Shoemaker</b>, launched from Earth in 1996! Fly toward the asteroid <b>Eros</b>.</p><p>Every <b>science flask</b> you catch <b>boosts your engine</b> — the more you collect, the faster you get there!</p>
+    <ul><li>${isTouch?'<b>Drag your finger</b> to fly':'Fly with the <b>arrow keys</b> — or drag with the mouse'}</li><li>Collect <span style="color:#9ff0ff">&#129514; flasks</span> to speed up — every ${STARS_PER_FACT} also unlock a fact</li><li>Dodge the space rocks</li></ul>`,
+    [{label:'Launch! 🚀',fn:()=>{beep(220,.4,'sawtooth',.08)}}]);
+}
+const S1_EVENTS = [
+  {t:16, kind:"mathilde", dur:9, show:.42, date:"June 27, 1997", icon:"🪨", title:"Flying past Mathilde",
+   msg:"NEAR zoomed past another asteroid called <b>Mathilde</b> and photographed it. It's <b>covered in craters</b> — and lighter than scientists expected, almost like it's full of holes!"},
+  {t:30, kind:"earth", dur:9, show:.42, date:"January 23, 1998", icon:"🌍", title:"Slingshot around Earth",
+   msg:"NEAR swung back past <b>Earth</b>. Earth's gravity pulled on the spacecraft and flung it onto a new path toward Eros — like a <b>slingshot</b>, with no fuel needed!"},
+  {t:43, kind:"erospass", dur:6, show:.5, date:"December 20, 1998", icon:"⚠️", title:"Uh-oh, engine trouble!",
+   msg:"A big engine burn <b>stopped too early</b>, so NEAR flew right past Eros. The team didn't give up — they planned a loop around the Sun and tried again <b>one year later</b>."}
+];
+const TIME_RATE = 0.33;   // mission clock speed on its own (slow)
+const FLASK_BOOST = 2.2;  // mission seconds each flask adds (spread smoothly)
+function yearAt(t){ // map game time to mission date for timeline
+  const k=[[0,1996.13],[16,1997.49],[30,1998.06],[43,1998.97],[62,2000.12]];
+  for(let i=1;i<k.length;i++) if(t<=k[i][0]) return lerp(k[i-1][1],k[i][1],(t-k[i-1][0])/(k[i][0]-k[i-1][0]));
+  return 2000.12;
+}
+function updateStage1(dt){
+  const S=s1;
+  const bst=Math.min(S.boost, dt*4); S.boost-=bst;
+  S.t+=dt*TIME_RATE+bst;
+  const p=clamp(S.t/S.dur,0,1);
+  // controls
+  const ay=(keys.down?1:0)-(keys.up?1:0), ax=(keys.right?1:0)-(keys.left?1:0);
+  S.vy+=ay*1500*dt; S.vx+=ax*900*dt; S.vy*=Math.pow(.02,dt); S.vx*=Math.pow(.02,dt);
+  if(drag1){ // follow the finger/mouse (ship sits a bit above the finger so it stays visible)
+    const tx=clamp(drag1.x,W*.08,W*.5), ty=clamp(drag1.y-(drag1.touch?70:0),90,H-70), k=Math.min(1,dt*7);
+    S.vx=(tx-S.x)*7; S.vy=(ty-S.y)*7; S.x+=(tx-S.x)*k; S.y+=(ty-S.y)*k;
+  } else { S.x=clamp(S.x+S.vx*dt,W*.08,W*.5); S.y=clamp(S.y+S.vy*dt,90,H-70); }
+  // events
+  // steady visual clock (never sped up by flasks)
+  S.scroll+=dt;
+  S.ep += clamp(p-S.ep, 0, dt*0.04);
+  // one flyby at a time; the mission clock waits at the milestone until its card has been read
+  for(const e of S1_EVENTS) if(S.t>=e.t && !S.events.has(e.t) && !S.fly.length){ S.events.add(e.t); S.fly.push({e,k:0}); }
+  for(const f of S.fly) if(!f.shown){ S.t=Math.min(S.t,f.e.t); S.boost=0; }
+  { const nxt=S1_EVENTS.find(e=>!S.events.has(e.t)); if(nxt && S.fly.length) S.t=Math.min(S.t,nxt.t); }
+  for(const f of S.fly){
+    f.k+=dt/f.e.dur;
+    if(!f.shown && f.k>=f.e.show){
+      f.shown=true; S.boost=0; drag1=null; for(const k in keys) keys[k]=false; beep(440,.15,'triangle',.08);
+      showCard(`<div class="kicker">Milestone · ${f.e.date}</div><div class="big">${f.e.icon}</div><h2>${f.e.title}</h2><p>${f.e.msg}</p>`,
+        [{label:'Continue &#9654;'}], 'milestone');
+      return;
+    }
+  }
+  S.fly=S.fly.filter(f=>f.k<1);
+  // spawn
+  if(!S.done && S.t<S.dur-4){
+    S.spawn-=dt;
+    if(S.spawn<=0){
+      S.spawn=0.7+Math.random()*0.6;
+      const star=Math.random()<.68;
+      S.objs.push({type:star?'star':'rock',x:W+40,y:100+Math.random()*(H-150),r:star?16:14+Math.random()*16,v:(star?230:260)+Math.random()*140,rot:Math.random()*6,seed:Math.random()*1e6|0,vr:(Math.random()-.5)*2});
+    }
+  }
+  for(const o of S.objs){
+    o.x-=o.v*dt; o.rot+= o.type==='star' ? dt : o.vr*dt;
+    const d=Math.hypot(o.x-S.x,o.y-S.y);
+    if(!o.gone && d<o.r+22){
+      o.gone=true;
+      if(o.type==='star'){S.score++; S.boost+=FLASK_BOOST; S.pops.push({x:o.x,y:o.y,t:0});
+        if(S.score%STARS_PER_FACT===0){ factMsg(S1_FACTS[S.fi%S1_FACTS.length],9000); S.fi++; chime(); setTimeout(()=>beep(1320,.25),200); }
+        else beep(700+(S.score%STARS_PER_FACT)*60,.07,'sine',.07);}
+      else {S.hit=0.5; S.vx-=300; beep(120,.25,'square',.08);}
+    }
+  }
+  S.objs=S.objs.filter(o=>o.x>-60&&!o.gone);
+  if(S.hit>0) S.hit-=dt;
+  const yr=yearAt(S.t);
+  for(const q of S.pops) q.t+=dt; S.pops=S.pops.filter(q=>q.t<.8);
+  const m=S.score%STARS_PER_FACT;
+  setHUD('1 · Approach Eros', `<div class="chip"><small>Date</small>${Math.floor(yr)}</div><div class="chip"><small>Next fact</small>&#129514; ${m} / ${STARS_PER_FACT}<div class="meter"><i style="width:${m/STARS_PER_FACT*100}%"></i></div></div><div class="chip"><small>Facts</small>📖 ${S.fi}</div>`);
+  if(S.t>=S.dur && !S.done && !S.fly.length && S.ep>.97){
+    S.done=true; clearMsgs(); chime();
+    showCard(`<div class="kicker">February 14, 2000</div><h2>You reached Eros! 🎉</h2>
+      <p>NEAR Shoemaker became the <b>first spacecraft ever to orbit an asteroid</b>.</p>
+      <p>Look at its shape — Eros is long and lumpy, about <b>34 km</b> from end to end. You collected <b>${S.score} science flasks</b> and unlocked <b>${S.fi} fact${S.fi===1?'':'s'}</b>.</p>`,
+      [{label:'Explore Eros &rarr;',fn:startStage2}]);
+  }
+}
+function drawStage1(t){
+  const S=s1, p=clamp(S.t/S.dur,0,1);
+  bg(); drawStars(S.scroll*.02, t);
+  const fk=kind=>{const f=S.fly.find(f=>f.e.kind===kind); return f?f.k:-1;};
+  // Mathilde flyby (t 10-26)
+  { const k=fk('mathilde'); if(k>=0){ const mx=lerp(W+80,-80,k), my=H*.25;
+    const mr=Math.min(48,H*.07); drawRock(mx,my,mr,S.scroll*.3,99,'#6a6663');
+    for(let i=0;i<6;i++){ctx.fillStyle='rgba(0,0,0,.35)';ctx.beginPath();ctx.arc(mx+(i%3-1)*mr*.45,my+(i<3?-1:1)*mr*.25,mr*(.1+(i%3)*.05),0,7);ctx.fill();}
+    label(mx,my+mr+18,'Mathilde'); }}
+  // Earth flyby (t 24-40)
+  { const k=fk('earth'); if(k>=0){ const ex=lerp(W+140,-140,k), ey=Math.max(150,H*.3), er=Math.min(90,H*.12);
+    const g=ctx.createRadialGradient(ex-er*.3,ey-er*.3,er*.1,ex,ey,er); g.addColorStop(0,'#8fd3ff'); g.addColorStop(.6,'#2b6fd6'); g.addColorStop(1,'#0b2a66');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,er,0,7); ctx.fill();
+    ctx.fillStyle='rgba(80,180,90,.8)'; ctx.beginPath(); ctx.ellipse(ex-er*.2,ey-er*.1,er*.35,er*.22,.5,0,7); ctx.fill(); ctx.beginPath(); ctx.ellipse(ex+er*.35,ey+er*.25,er*.2,er*.3,-.3,0,7); ctx.fill();
+    ctx.strokeStyle='rgba(140,200,255,.4)'; ctx.lineWidth=6; ctx.beginPath(); ctx.arc(ex,ey,er+4,0,7); ctx.stroke();
+    label(ex,ey+er+20,'Earth'); }}
+  // Eros grows (passes by once during the missed burn, then grows for real)
+  let es = lerp(3, Math.min(W*.3,H*.42), Math.pow(S.ep,3.2));
+  { const k=fk('erospass'); if(k>=0) es = Math.max(es, Math.min(70,H*.1)*Math.sin(k*Math.PI)); }
+  const ex=W*.76, ey=H*.42;
+  drawEros(ex,ey,es,-.35+S.scroll*.04,true);
+  if(es>8) label(ex,ey+es*.5+26,'Eros');
+  // objects
+  for(const o of S.objs){ if(o.type==='star') drawFlask(o.x,o.y,o.r*1.5,o.rot,o.seed); else drawRock(o.x,o.y,o.r,o.rot,o.seed); }
+  // ship
+  const thrusting = keys.up||keys.down||keys.right||!!drag1;
+  ctx.globalAlpha = S.hit>0 && Math.floor(S.hit*20)%2 ? .4 : 1;
+  drawNEAR(S.x,S.y,22,0,.6+(thrusting?.6:0),'back');
+  ctx.font='800 20px "Baloo 2", sans-serif'; ctx.textAlign='center';
+  for(const q of S.pops){ ctx.fillStyle=`rgba(159,240,255,${1-q.t/.8})`; ctx.fillText('+1',q.x,q.y-q.t*50); }
+  ctx.globalAlpha=1;
+  // timeline
+  drawTimeline(S.t);
+}
+function label(x,y,txt){
+  ctx.font='700 15px "Baloo 2", sans-serif'; ctx.textAlign='center';
+  ctx.fillStyle='rgba(10,15,45,.7)'; const w=ctx.measureText(txt).width+16; ctx.fillRect(x-w/2,y-13,w,22);
+  ctx.fillStyle='#ffd88a'; ctx.fillText(txt,x,y+3);
+}
+function drawTimeline(t){
+  const hw=Math.min(260,Math.max(W*.3,W*.5-36)), x0=W*.5-hw, x1=W*.5+hw, y=H-28, p=clamp(t/62,0,1);
+  ctx.strokeStyle='rgba(160,180,255,.3)'; ctx.lineWidth=4; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke();
+  ctx.strokeStyle='#ffc44d'; ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(lerp(x0,x1,p),y); ctx.stroke();
+  const marks=[[0,W<500?'Launch':'1996 Launch'],[16,'Mathilde'],[30,'Earth'],[62,'Eros']];
+  ctx.font='600 12px "Baloo 2", sans-serif'; ctx.textAlign='center';
+  for(const [mt,l] of marks){const mx=lerp(x0,x1,mt/62); ctx.fillStyle=t>=mt?'#ffc44d':'#6b78a8'; ctx.beginPath(); ctx.arc(mx,y,5,0,7); ctx.fill(); ctx.fillStyle='#a9b4dd'; ctx.fillText(l,mx,y-10);}
+}
+
+// =====================================================================
+// STAGE 2: EXPLORE
+// =====================================================================
+const SPOTS = [
+  {id:'psyche', x:-0.45,y:-0.02, title:'Psyche Crater', icon:'🕳️',
+   text:"This is the <b>biggest crater</b> on Eros — about <b>5 km wide</b>! Long ago, another space rock smashed into Eros here. Craters are like scars that tell us about crashes in space."},
+  {id:'himeros', x:0.03,y:-0.2, title:'Himeros, the Saddle', icon:'🐴',
+   text:"See how Eros pinches in the middle? This big dip is called <b>Himeros</b>, and it's shaped like a horse's <b>saddle</b>. NEAR would later land just south of it!"},
+  {id:'boulders', x:0.5,y:0.12, title:'Boulder Field', icon:'🪨',
+   text:"Eros is sprinkled with <b>boulders</b> — some as big as a house! Many were probably thrown out when big craters formed, then fell back down."},
+  {id:'ridge', x:0.5,y:-0.17, title:'The Long Ridge', icon:'⛰️',
+   text:"A long <b>ridge</b> stretches across the surface. Scientists think it's a giant crack, a clue that Eros is <b>one solid rock</b> and not a loose pile of rubble."},
+  {id:'pond', x:-0.74,y:0.09, title:'Dust Ponds', icon:'🏖️',
+   text:"Some craters have flat, smooth floors called <b>ponds</b>. They're not water — they're filled with super-fine <b>dust</b> that slid down and settled at the bottom."},
+  {id:'gravity', x:-0.12,y:0.2, title:'Super-Weak Gravity', icon:'🪶',
+   text:"Gravity on Eros is <b>more than 1,000 times weaker</b> than on Earth. A strong jump might send you flying off into space! Also, NEAR found that Eros has <b>no magnetic field</b>."}
+];
+let s2;
+// Fit Eros into the free area between the HUD (top) and hint (bottom).
+// On tall / portrait screens, stand Eros upright so it fills the space.
+function erosFrame(){
+  const top=84, bottom=64, aw=W-24, ah=Math.max(120,H-top-bottom);
+  const portrait = ah > aw*1.05;
+  // Eros is 2s long and ~0.9s thick (incl. ring padding)
+  const s = portrait ? Math.min(ah*.46, aw*.95/0.9) : Math.min(aw*.46, ah*.95/0.9);
+  return {cx:W/2, cy:top+ah/2, s, rot: portrait?Math.PI/2:0, portrait};
+}
+function startStage2(){
+  stage=2; clearMsgs(); $('pad').classList.remove('show');
+  s2={t:0,found:new Set(),hover:null};
+  showCard(`<div class="kicker">Stage 2 of 3</div><h2>Explore the asteroid</h2>
+    <p>NEAR spent a whole year circling Eros and took <b>160,000 pictures</b> — about 10 times more data than planned!</p>
+    <p><b>Tap the glowing rings</b> to scan the surface. Find all <b>6 discoveries</b> to unlock the landing.</p>`,
+    [{label:'Start scanning 🔍'}]);
+  hint('Tap or click the glowing rings');
+}
+function spotXY(sp){ const f=erosFrame(); return f.portrait ? [f.cx-sp.y*f.s, f.cy+sp.x*f.s] : [f.cx+sp.x*f.s, f.cy+sp.y*f.s]; }
+function spotR(){ const f=erosFrame(); return clamp(f.s*.05, isTouch?22:16, 34); }
+cv.addEventListener('pointermove',e=>{ if(stage!==2) return; s2.hover=pickSpot(e.clientX,e.clientY); cv.style.cursor=s2.hover?'pointer':'default'; });
+cv.addEventListener('pointerdown',e=>{
+  audioInit();
+  if(stage!==2||paused) return;
+  const sp=pickSpot(e.clientX,e.clientY); if(!sp) return;
+  const first=!s2.found.has(sp.id); s2.found.add(sp.id); chime();
+  const n=s2.found.size;
+  showCard(`<div class="kicker">Discovery ${n} of ${SPOTS.length}${first?'':' (again)'}</div><div class="big">${sp.icon}</div><h2>${sp.title}</h2><p>${sp.text}</p>`,
+    [{label: n===SPOTS.length && first ? 'All found! Continue &rarr;' : 'Keep exploring', fn:()=>{ if(n===SPOTS.length){ $('landBtn').style.display='block'; hint(null);} }}]);
+});
+function pickSpot(mx,my){
+  let best=null,bd=1e9; for(const sp of SPOTS){const [x,y]=spotXY(sp); const d=Math.hypot(mx-x,my-y); if(d<spotR()*1.6&&d<bd){bd=d;best=sp;}} return best;
+}
+$('landBtn').onclick=()=>{audioInit(); beep(520,.08); $('landBtn').style.display='none'; startStage3();};
+function updateStage2(dt){
+  s2.t+=dt;
+  setHUD('2 · Explore Eros', `<div class="chip"><small>Discoveries</small>${s2.found.size} / ${SPOTS.length}</div>`);
+}
+function drawStage2(t){
+  bg(); drawStars(0,t);
+  const f=erosFrame();
+  // orbit path + spacecraft (behind/in front)
+  const oa=s2.t*.35;
+  let orx=f.s*1.1, ory=f.s*.55;
+  if(f.portrait){ [orx,ory]=[Math.min(ory,W*.47),orx]; }
+  ctx.strokeStyle='rgba(94,224,255,.18)'; ctx.setLineDash([6,8]); ctx.lineWidth=2;
+  ctx.beginPath(); ctx.ellipse(f.cx,f.cy,orx,ory,0,0,7); ctx.stroke(); ctx.setLineDash([]);
+  const sx=f.cx+Math.cos(oa)*orx, sy=f.cy+Math.sin(oa)*ory;
+  const behind=Math.sin(oa)<0;
+  if(behind) drawNEAR(sx,sy,12,oa);
+  drawEros(f.cx,f.cy,f.s,f.rot,true);
+  if(!behind) drawNEAR(sx,sy,15,oa);
+  // scan beam toward hovered spot
+  // hotspots
+  for(const sp of SPOTS){
+    const [x,y]=spotXY(sp), got=s2.found.has(sp.id), hv=s2.hover===sp;
+    const r=spotR()*(hv?1.15:1);
+    if(!got){
+      const pulse=(t*1.2+sp.x)%1;
+      ctx.strokeStyle=`rgba(94,224,255,${.9-pulse*.9})`; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.arc(x,y,r+pulse*r*.9,0,7); ctx.stroke();
+      ctx.strokeStyle='#5ee0ff'; ctx.lineWidth=hv?4:2.5; ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.stroke();
+      ctx.fillStyle='rgba(94,224,255,.15)'; ctx.fill();
+      ctx.fillStyle='#fff'; ctx.font=`800 ${Math.round(r)}px "Baloo 2"`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('?',x,y+1); ctx.textBaseline='alphabetic';
+    } else {
+      ctx.fillStyle='rgba(93,242,154,.9)'; ctx.beginPath(); ctx.arc(x,y,r*.6,0,7); ctx.fill();
+      ctx.strokeStyle='#0b2a18'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(x-r*.28,y); ctx.lineTo(x-r*.05,y+r*.24); ctx.lineTo(x+r*.3,y-r*.22); ctx.stroke();
+      if(hv) label(x,y-r-10,sp.title);
+    }
+  }
+  if(s2.hover){ const [x,y]=spotXY(s2.hover); ctx.strokeStyle='rgba(94,224,255,.35)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(x,y); ctx.stroke(); }
+}
+
+// =====================================================================
+// STAGE 3: LAND
+// =====================================================================
+const WORLD_W=420, START_ALT=250, G=0.22, THRUST=0.6, SIDE=0.28, SAFE_KMH=7.5;
+let s3, TER;
+function buildTerrain(){
+  const R=rng(2001), pts=[], zone={x0:250,x1:296};
+  const n1=R()*6, n2=R()*6;
+  for(let x=0;x<=WORLD_W;x+=2){
+    let h=30+10*Math.sin(x/37+n1)+6*Math.sin(x/13+n2)+3*Math.sin(x/5.3);
+    const dz = x<zone.x0 ? zone.x0-x : x>zone.x1 ? x-zone.x1 : 0;
+    const k = clamp(dz/30,0,1); h = lerp(22,h,k*k*(3-2*k));
+    pts.push(h);
+  }
+  // blend edges
+  const boulders=[];
+  for(let i=0;i<40;i++){const x=R()*WORLD_W; if(x>zone.x0-8&&x<zone.x1+8) continue; boulders.push({x,r:1.5+R()*5});}
+  TER={pts,zone,boulders};
+}
+function terH(x){ const i=clamp(x/2,0,TER.pts.length-1), a=Math.floor(i), b=Math.min(a+1,TER.pts.length-1); return lerp(TER.pts[a],TER.pts[b],i-a); }
+function startStage3(){
+  stage=3; clearMsgs(); hint(null); buildTerrain();
+  $('pad').classList.toggle('show', isTouch);
+  s3={x:70,y:START_ALT,vx:2.2,vy:-2.5,fuel:100,state:'fly',t:0,photos:0,lastPhoto:0,flash:0,thrust:false};
+  showCard(`<div class="kicker">Stage 3 of 3 · February 12, 2001</div><h2>Land on Eros</h2>
+    <p>NEAR was <b>never built to land</b> — but the team decided to try! Bring it down gently.</p>
+    <ul><li>${isTouch?'Hold <b>&#128293; Thrust</b>':'<b>&#9650;</b> (or Space)'} fires the thruster to slow down</li><li><b>&#9664; &#9654;</b> nudge sideways</li><li>Touch down in the <span style="color:#5df29a"><b>green zone</b></span> slower than <b>${SAFE_KMH} km/h</b></li></ul>
+    <p style="font-size:15px;color:#a9b4dd">Gravity on Eros is very weak, so we've sped up time to make it a challenge.</p>`,
+    [{label:'Begin descent ⬇️'}]);
+}
+function updateStage3(dt){
+  const S=s3; if(S.state!=='fly') return;
+  S.t+=dt;
+  let ay=-G, ax=0, burn=false;
+  if(S.fuel>0){
+    if(keys.up){ay+=THRUST; S.fuel-=2.4*dt; burn=true;}
+    if(keys.left){ax-=SIDE; S.fuel-=1.1*dt; burn=true;}
+    if(keys.right){ax+=SIDE; S.fuel-=1.1*dt; burn=true;}
+    S.fuel=Math.max(0,S.fuel);
+  }
+  S.thrust=keys.up&&S.fuel>0; setThrust(burn);
+  S.vy+=ay*dt; S.vx+=ax*dt; S.vx*=Math.pow(.97,dt);
+  S.x+=S.vx*dt; S.y+=S.vy*dt;
+  if(S.x<5){S.x=5;S.vx=Math.abs(S.vx)*.3} if(S.x>WORLD_W-5){S.x=WORLD_W-5;S.vx=-Math.abs(S.vx)*.3}
+  if(S.y>START_ALT+60){S.y=START_ALT+60;S.vy=Math.min(S.vy,0)}
+  // photos during descent (NEAR took 69!)
+  const target=Math.floor(69*clamp(1-(S.y-terH(S.x))/(START_ALT-25),0,1));
+  if(target>S.photos){S.photos=target; S.flash=.15; if(S.photos%5===0) beep(1400,.04,'square',.04);}
+  if(S.flash>0) S.flash-=dt;
+  const alt=S.y-4-terH(S.x), spd=Math.hypot(S.vx,S.vy), kmh=spd*3.6;
+  const col = kmh<=SAFE_KMH?'#5df29a':kmh<=15?'#ffc44d':'#ff6b6b';
+  setHUD('3 · Land on Eros',
+    `<div class="chip"><small>Speed</small><span style="color:${col}">${kmh.toFixed(1)} km/h</span></div>
+     <div class="chip"><small>Altitude</small>${Math.max(0,alt).toFixed(0)} m</div>
+     <div class="chip"><small>Fuel</small><span style="color:${S.fuel<20?'#ff6b6b':'inherit'}">${S.fuel.toFixed(0)}%</span></div>
+     <div class="chip"><small>Photos</small>📷 ${S.photos}/69</div>`);
+  if(alt<=0){
+    setThrust(false);
+    const z=TER.zone, inZone=S.x>=z.x0&&S.x<=z.x1;
+    S.y=terH(S.x)+4;
+    if(kmh<=SAFE_KMH && inZone){ S.state='won'; S.photos=69; chime(); setTimeout(()=>beep(1320,.3),220); setTimeout(()=>winCard(kmh),700); }
+    else { S.state='crash'; S.crashKmh=kmh; beep(90,.5,'sawtooth',.12);
+      const why = kmh>SAFE_KMH ? `You hit the ground at <b>${kmh.toFixed(1)} km/h</b> — too fast! Hold &#9650; longer to slow down.` : `Nice and gentle at ${kmh.toFixed(1)} km/h, but you landed on bumpy, rocky ground. Aim for the <b>green zone</b>.`;
+      setTimeout(()=>showCard(`<div class="kicker">Mission control</div><h2>Oops! Let's try again</h2><p>${why}</p><p style="font-size:15px;color:#a9b4dd">Tip: slow down early, while you're still high up. Watch the speed turn green.</p>`,
+        [{label:'Try again ↻',fn:startStage3Quick},{label:'Back to start',ghost:true,fn:titleScreen}]),900);
+    }
+  }
+}
+function startStage3Quick(){ buildTerrain(); s3={x:70,y:START_ALT,vx:2.2,vy:-2.5,fuel:100,state:'fly',t:0,photos:0,lastPhoto:0,flash:0,thrust:false}; }
+function winCard(kmh){
+  $('pad').classList.remove('show');
+  showCard(`<div class="kicker">February 12, 2001 · Mission complete</div><div class="big">🏅</div><h2>You landed on Eros!</h2>
+    <p>Touchdown at <b>${kmh.toFixed(1)} km/h</b>. The real NEAR touched down at about <b>6.4 km/h</b> — slower than a jog!</p>
+    <ul><li>It was the <b>first spacecraft ever to land on an asteroid</b>.</li>
+    <li>It snapped <b>69 close-up photos</b> on the way down.</li>
+    <li>Even though it wasn't built to land, it survived and kept sending science for about <b>two weeks</b>.</li></ul>`,
+    [{label:'Play again ↻',fn:titleScreen},{label:'Land again',ghost:true,fn:startStage3}]);
+}
+function drawStage3(t){
+  const S=s3;
+  bg(); drawStars(0,t);
+  // big Eros limb in the sky
+  const foot=isTouch?100:10, sc=Math.min(W/WORLD_W,(H-100-foot)/(START_ALT+70)), ox=(W-WORLD_W*sc)/2, gy=H-foot;
+  const X=x=>ox+x*sc, Y=y=>gy-y*sc;
+  // distant sun
+  const sg=ctx.createRadialGradient(W*.88,H*.15,0,W*.88,H*.15,120); sg.addColorStop(0,'rgba(255,240,200,.9)'); sg.addColorStop(.15,'rgba(255,220,150,.35)'); sg.addColorStop(1,'rgba(255,200,120,0)');
+  ctx.fillStyle=sg; ctx.fillRect(0,0,W,H);
+  // ground
+  ctx.beginPath(); ctx.moveTo(0,H); ctx.lineTo(0,Y(TER.pts[0]));
+  TER.pts.forEach((h,i)=>ctx.lineTo(X(i*2),Y(h))); ctx.lineTo(W,Y(TER.pts[TER.pts.length-1])); ctx.lineTo(W,H); ctx.closePath();
+  const g=ctx.createLinearGradient(0,Y(50),0,H); g.addColorStop(0,'#c9a676'); g.addColorStop(1,'#4a3826');
+  ctx.fillStyle=g; ctx.fill();
+  ctx.strokeStyle='rgba(255,235,200,.6)'; ctx.lineWidth=2; ctx.beginPath(); TER.pts.forEach((h,i)=>i?ctx.lineTo(X(i*2),Y(h)):ctx.moveTo(X(0),Y(h))); ctx.stroke();
+  // boulders
+  for(const b of TER.boulders){ const bx=X(b.x), by=Y(terH(b.x)), r=b.r*sc;
+    ctx.fillStyle='#8a6e4e'; ctx.beginPath(); ctx.ellipse(bx,by-r*.4,r,r*.8,0,0,7); ctx.fill();
+    ctx.fillStyle='rgba(255,235,200,.35)'; ctx.beginPath(); ctx.ellipse(bx-r*.3,by-r*.75,r*.4,r*.25,0,0,7); ctx.fill(); }
+  // landing zone
+  const z=TER.zone, zy=Y(22);
+  ctx.fillStyle='rgba(93,242,154,.25)'; ctx.fillRect(X(z.x0),zy-4,(z.x1-z.x0)*sc,8);
+  ctx.strokeStyle='#5df29a'; ctx.lineWidth=3; ctx.setLineDash([8,6]); ctx.beginPath(); ctx.moveTo(X(z.x0),zy); ctx.lineTo(X(z.x1),zy); ctx.stroke(); ctx.setLineDash([]);
+  for(const fx of [z.x0,z.x1]){ ctx.strokeStyle='#ddd'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(X(fx),zy); ctx.lineTo(X(fx),zy-28); ctx.stroke(); ctx.fillStyle='#5df29a'; ctx.beginPath(); ctx.moveTo(X(fx),zy-28); ctx.lineTo(X(fx)+16,zy-22); ctx.lineTo(X(fx),zy-16); ctx.fill(); }
+  label(X((z.x0+z.x1)/2), zy+26, 'Landing zone · near Himeros');
+  // guide line
+  if(S.state==='fly'){ ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.setLineDash([3,6]); ctx.beginPath(); ctx.moveTo(X(S.x),Y(S.y)); ctx.lineTo(X(S.x),Y(terH(S.x))); ctx.stroke(); ctx.setLineDash([]); }
+  // craft (rotated so panels face down-ish; flame downward)
+  const cs=Math.max(22,9*sc);
+  if(S.state==='crash'){ for(let i=0;i<8;i++){ drawRock(X(S.x)+(i-4)*cs*.4,Y(S.y)-Math.abs(Math.sin(i))*cs*.5,cs*.18,i,i,'#c58a1c'); } }
+  else drawNEAR(X(S.x),Y(S.y)-cs*.4,cs,0,S.thrust?1:0,'down');
+  // side puffs
+  if(S.state==='fly'&&S.fuel>0){ ctx.fillStyle='rgba(255,255,255,.7)';
+    if(keys.left){ctx.beginPath();ctx.arc(X(S.x)+cs*.7,Y(S.y)-cs*.4,cs*.15*(1+Math.random()),0,7);ctx.fill();}
+    if(keys.right){ctx.beginPath();ctx.arc(X(S.x)-cs*.7,Y(S.y)-cs*.4,cs*.15*(1+Math.random()),0,7);ctx.fill();} }
+  if(S.flash>0){ctx.fillStyle=`rgba(255,255,255,${S.flash*1.2})`;ctx.fillRect(0,0,W,H);}
+  // speed gauge
+  if(S.state==='fly'){
+    const kmh=Math.hypot(S.vx,S.vy)*3.6, gx=W-56, gyy=H*.3, gh=H*.4, max=30;
+    ctx.fillStyle='rgba(14,22,58,.85)'; ctx.fillRect(gx-6,gyy-6,30,gh+12);
+    const sy=gyy+gh-gh*SAFE_KMH/max; ctx.fillStyle='rgba(93,242,154,.35)'; ctx.fillRect(gx,sy,18,gyy+gh-sy);
+    const vy=gyy+gh-gh*clamp(kmh/max,0,1); ctx.fillStyle=kmh<=SAFE_KMH?'#5df29a':kmh<=15?'#ffc44d':'#ff6b6b'; ctx.fillRect(gx-4,vy-3,26,6);
+    ctx.save(); ctx.translate(gx-16,gyy+gh/2); ctx.rotate(-Math.PI/2); ctx.font='700 13px "Baloo 2"'; ctx.textAlign='center'; ctx.fillStyle='#a9b4dd'; ctx.fillText('SPEED',0,0); ctx.restore();
+  }
+}
+
+// =====================================================================
+// TITLE + LOOP
+// =====================================================================
+function titleScreen(){
+  stage=0; clearMsgs(); hint(null); setThrust(false); $('hud').style.display='none'; $('pad').classList.remove('show'); $('landBtn').style.display='none';
+  showCard(`<div class="kicker">A NASA-inspired space adventure</div><h1>Mission to Eros</h1>
+    <p>Fly the real <b>NEAR Shoemaker</b> spacecraft to a giant space rock, explore its craters and boulders, and try to <b>land on an asteroid</b> — just like NASA did in 2001!</p>
+    <p style="font-size:15px;color:#a9b4dd">3 stages · about 5 minutes · keyboard, mouse or touch</p>
+    <div class="jump">Demo shortcuts: <a href="#" data-j="2" style="color:#5ee0ff">Stage 2</a> · <a href="#" data-j="3" style="color:#5ee0ff">Stage 3</a></div>`,
+    [{label:'Start mission 🚀',fn:startStage1}]);
+  document.querySelectorAll('[data-j]').forEach(a=>a.onclick=e=>{e.preventDefault();audioInit();hideCard(); a.dataset.j==='2'?startStage2():startStage3();});
+}
+let titleT=0;
+function frame(now){
+  let dt=Math.min(.05,(now-last)/1000); last=now; const t=now/1000;
+  if(stage===0){ titleT+=dt; bg(); drawStars(titleT*.01,t); const s=Math.min(W*.34,H*.6); drawEros(W*.5,H*.5,s,titleT*.05-.3,true); drawNEAR(W*.5+Math.cos(titleT*.4)*s*1.2,H*.5+Math.sin(titleT*.4)*s*.45,14,titleT*.4); }
+  else if(stage===1){ if(!paused) updateStage1(dt); drawStage1(t); }
+  else if(stage===2){ if(!paused) updateStage2(dt); drawStage2(t); }
+  else if(stage===3){ if(!paused) updateStage3(dt); else setThrust(false); drawStage3(t); }
+  requestAnimationFrame(frame);
+}
+titleScreen();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
