@@ -84,9 +84,12 @@ const I18N = {
     eros:'Eros', mathilde:'Mathilde', earth:'Earth', launch:'Launch', launchLong:'1996 Launch',
     // stage 1
     s1Card:(touch,n)=>`<div class="kicker">Stage 1 of 3</div><h2>Approach Eros</h2>
-    <p>You're the pilot of <b>NEAR Shoemaker</b>, launched from Earth in 1996! Fly toward the asteroid <b>Eros</b>.</p><p>Every <b>science flask</b> you catch <b>boosts your engine</b> — the more you collect, the faster you get there!</p>
+    <p>You control the <b>NEAR Shoemaker</b> spacecraft, launched from Earth in 1996! Guide it to the asteroid <b>Eros</b>.</p><p>Every <b>science flask</b> you catch <b>boosts your engine</b> — the more you collect, the faster you get there!</p>
     <ul><li>${touch?'<b>Drag your finger</b> to fly':'Fly with the <b>arrow keys</b> — or drag with the mouse'}</li><li>Collect <span style="color:#9ff0ff">&#129514; flasks</span> to speed up — every ${n} also unlock a fact</li><li>Dodge the space rocks</li></ul>`,
-    launchBtn:'Launch! 🚀',
+    launchBtn:'Launch! 🚀', liftoff:'Liftoff!',
+    introPad:"<b>Cape Canaveral, Florida</b> · February 17, 1996<br>A <b>Delta II</b> rocket with NEAR on top is ready to go!",
+    introSep:"The rocket did its job! Its stages drop away and the <b>nose cone opens</b>…",
+    introGo:"<b>NEAR is free!</b> You're in control now — fly to Eros!",
     facts:[
       "<b>Asteroids</b> are rocky leftovers from when the planets formed, about <b>4.5 billion years</b> ago.",
       "Most asteroids live in the <b>asteroid belt</b> between Mars and Jupiter. Eros is a <b>near-Earth asteroid</b> — its path comes closer to us.",
@@ -163,9 +166,12 @@ const I18N = {
     eros:'Ерос', mathilde:'Матильда', earth:'Земля', launch:'Старт', launchLong:'Старт 1996',
     // stage 1
     s1Card:(touch,n)=>`<div class="kicker">Етап 1 з 3</div><h2>Політ до Ероса</h2>
-    <p>Ти — пілот космічного апарата <b>NEAR Shoemaker</b>, запущеного із Землі у 1996 році! Лети до астероїда <b>Ерос</b>.</p><p>Кожна <b>наукова колба</b>, яку ти зловиш, <b>розганяє двигун</b> — що більше збереш, то швидше долетиш!</p>
+    <p>Ти керуєш космічним апаратом <b>NEAR Shoemaker</b>, запущеним із Землі у 1996 році! Веди його до астероїда <b>Ерос</b>.</p><p>Кожна <b>наукова колба</b>, яку ти зловиш, <b>розганяє двигун</b> — що більше збереш, то швидше долетиш!</p>
     <ul><li>${touch?'<b>Веди пальцем</b>, щоб керувати':'Керуй <b>стрілками</b> — або веди мишкою'}</li><li>Збирай <span style="color:#9ff0ff">&#129514; колби</span>, щоб пришвидшитися — кожні ${n} відкривають факт</li><li>Ухиляйся від космічних каменів</li></ul>`,
-    launchBtn:'Старт! 🚀',
+    launchBtn:'Старт! 🚀', liftoff:'Пуск!',
+    introPad:"<b>Мис Канаверал, Флорида</b> · 17 лютого 1996<br>Ракета <b>Delta II</b> з NEAR на борту готова до старту!",
+    introSep:"Ракета виконала свою роботу! Її ступені відокремлюються, а <b>головний обтічник розкривається</b>…",
+    introGo:"<b>NEAR у відкритому космосі!</b> Тепер керуєш ти — лети до Ероса!",
     facts:[
       "<b>Астероїди</b> — це кам'яні залишки з часів, коли формувалися планети, приблизно <b>4,5 мільярда років</b> тому.",
       "Більшість астероїдів живе в <b>поясі астероїдів</b> між Марсом і Юпітером. Ерос — <b>навколоземний астероїд</b>: його шлях пролягає ближче до нас.",
@@ -498,10 +504,128 @@ cv.addEventListener('pointermove',e=>{ if(drag1) { drag1.x=e.clientX; drag1.y=e.
 ['pointerup','pointercancel','pointerleave'].forEach(n=>cv.addEventListener(n,()=>{ drag1=null; }));
 function startStage1(){
   stage=1; clearMsgs(); hint(null); $('landBtn').style.display='none';
-  $('pad').classList.remove('show');
-  s1={t:0,dur:62,x:W*.22,y:H*.55,vx:0,vy:0,objs:[],pops:[],boost:0,scroll:0,ep:0,fly:[],spawn:1.2,score:0,fi:0,hit:0,events:new Set(),done:false};
+  $('pad').classList.remove('show'); $('hud').style.display='none';
+  s1={t:0,dur:62,x:W*.22,y:H*.55,vx:0,vy:0,objs:[],pops:[],boost:0,scroll:0,ep:0,fly:[],spawn:1.2,score:0,fi:0,hit:0,events:new Set(),done:false,
+      intro:{t:0,beeps:0,puffs:[]}};
   showCard(T.s1Card(isTouch,STARS_PER_FACT),
-    [{label:T.launchBtn,fn:()=>{beep(220,.4,'sawtooth',.08)}}]);
+    [{label:T.launchBtn,fn:()=>eventMsg(T.introPad,4500)}]);
+}
+
+// ---------- launch movie: pad → countdown → ascent → separation → NEAR released ----------
+const INTRO = {lift:3, sep:10, open:11.2, free:11.6, end:13.6};
+const CLOUDS = (()=>{ const R=rng(17); return Array.from({length:14},()=>({x:R(),alt:260+R()*1100,w:50+R()*110})); })();
+const ease = p => p*p*(3-2*p);
+const introAlt = t => { const k=Math.max(0,t-INTRO.lift); return 40*k*k; };
+function introPose(t){ // rocket centre on screen; cam = how far the ground has scrolled down
+  const padY=H*.8, u0=clamp(H*.035,14,30), alt=introAlt(t), rise=Math.min(alt,padY-H*.5);
+  const e=ease(clamp((t-INTRO.lift-3.5)/3,0,1)), u=lerp(u0,u0*.7,e);   // pitch over to fly right
+  return {x:lerp(W*.5,Math.max(W*.16,4.6*u),e), y:lerp(padY-rise-3.45*u0,H*.48,e), rot:e*Math.PI/2, u, cam:alt-rise, padY, alt};
+}
+const L2S = (P,lx,ly) => [P.x+(lx*Math.cos(P.rot)-ly*Math.sin(P.rot))*P.u, P.y+(lx*Math.sin(P.rot)+ly*Math.cos(P.rot))*P.u];
+function updateIntro(S,dt){
+  const I=S.intro; I.t+=dt; const t=I.t, P=introPose(t);
+  while(I.beeps<3 && t>=I.beeps){ beep(880,.15,'square',.05); I.beeps++; }
+  if(I.beeps===3 && t>=INTRO.lift){ I.beeps++; beep(1320,.35,'sine',.1); setThrust(true); }
+  if(!I.sep && t>=INTRO.sep){ I.sep=true; setThrust(false); beep(260,.12,'square',.07); eventMsg(T.introSep,3200); }
+  if(!I.open && t>=INTRO.open){ I.open=true; beep(620,.1,'triangle',.07); }
+  // steam before liftoff, then exhaust smoke (kept in ground coordinates so it stays behind)
+  if(t>1.5 && t<INTRO.lift+2.5 && (t>=INTRO.lift || Math.random()<.3)){
+    for(let i=0;i<(t<INTRO.lift?1:3);i++){ const [nx,ny]=L2S(P,(Math.random()-.5)*.8,3.6);
+      const pre=t<INTRO.lift;
+      I.puffs.push({x:nx,y:ny-P.cam,r:P.u*(.3+Math.random()*.3),vx:(Math.random()-.5)*P.u*(pre?1.5:4),g:pre?.4:1,t:0}); }
+  }
+  for(const q of I.puffs){ q.t+=dt; q.r+=dt*P.u*q.g; q.x+=q.vx*dt; }
+  I.puffs=I.puffs.filter(q=>q.t<3);
+  if(t>=INTRO.end){ S.intro=null; drag1=null; eventMsg(T.introGo,4500); chime(); }
+}
+function rocketFlame(x,y,w,len){
+  const L=len*(.85+Math.random()*.3);
+  ctx.fillStyle='rgba(255,150,50,.9)'; ctx.beginPath(); ctx.moveTo(x-w,y); ctx.quadraticCurveTo(x-w*.9,y+L*.5,x,y+L); ctx.quadraticCurveTo(x+w*.9,y+L*.5,x+w,y); ctx.fill();
+  ctx.fillStyle='rgba(255,240,190,.95)'; ctx.beginPath(); ctx.moveTo(x-w*.5,y); ctx.quadraticCurveTo(x-w*.4,y+L*.3,x,y+L*.55); ctx.quadraticCurveTo(x+w*.4,y+L*.3,x+w*.5,y); ctx.fill();
+}
+// rocket parts in local units (u), nose pointing up (-y)
+function drawLowerStage(f){
+  if(f>0){ rocketFlame(0,3.45,.4,3.2*f); rocketFlame(-.75,3.32,.16,1.8*f); rocketFlame(.75,3.32,.16,1.8*f); }
+  for(const sx of [-1,1]){ // strap-on boosters
+    ctx.fillStyle='#f1f3f7'; ctx.beginPath(); ctx.moveTo(sx*.57,3.1); ctx.lineTo(sx*.57,1); ctx.lineTo(sx*.75,.4); ctx.lineTo(sx*.93,1); ctx.lineTo(sx*.93,3.1); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#9aa3b5'; ctx.fillRect(sx*.75-.14,3.1,.28,.22);
+  }
+  const g=ctx.createLinearGradient(-.5,0,.5,0); g.addColorStop(0,'#7fb8c9'); g.addColorStop(.45,'#cfeef6'); g.addColorStop(1,'#5d93a6');
+  ctx.fillStyle=g; ctx.fillRect(-.5,-2,1,5.1);
+  ctx.fillStyle='#2b4f7a'; ctx.fillRect(-.5,-1.2,1,.18);
+  ctx.fillStyle='#4a4f5c'; ctx.beginPath(); ctx.moveTo(-.3,3.1); ctx.lineTo(.3,3.1); ctx.lineTo(.4,3.45); ctx.lineTo(-.4,3.45); ctx.closePath(); ctx.fill();
+}
+function drawUpperStage(f){
+  if(f>0) rocketFlame(0,-1.7,.22,1.6*f);
+  ctx.fillStyle='#4a4f5c'; ctx.beginPath(); ctx.moveTo(-.18,-2); ctx.lineTo(.18,-2); ctx.lineTo(.26,-1.7); ctx.lineTo(-.26,-1.7); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#e9ecf2'; ctx.fillRect(-.42,-3.2,.84,1.2);
+  ctx.fillStyle='#3a3f4c'; ctx.fillRect(-.42,-2.45,.84,.14);
+}
+function drawFairing(side){
+  ctx.beginPath(); ctx.moveTo(0,-3.2); ctx.lineTo(side*.55,-3.2); ctx.lineTo(side*.55,-4.3); ctx.quadraticCurveTo(side*.55,-5.1,0,-5.4); ctx.closePath();
+  ctx.fillStyle='#f7f8fb'; ctx.fill(); ctx.strokeStyle='#b9c0cf'; ctx.lineWidth=.04; ctx.stroke();
+}
+function drawIntro(t){
+  const I=s1.intro, it=I.t, P=introPose(it), u=P.u, k=clamp((P.alt-200)/1600,0,1);
+  // sky fades from blue to space
+  bg();
+  ctx.globalAlpha=k; drawStars((it-INTRO.end)*.02,t); ctx.globalAlpha=1;
+  if(k<1){ const sky=ctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,'#2f6fc4'); sky.addColorStop(1,'#a9d8ff');
+    ctx.globalAlpha=1-k; ctx.fillStyle=sky; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1; }
+  // Earth seen from orbit, sinking away
+  const ea=clamp((P.alt-1100)/600,0,1), eh=H*.24*(1-clamp((it-8.5)/3.5,0,1));
+  if(ea>0 && eh>0){ const R=Math.max(W,H)*1.6, cx=W*.4, cy=H-eh+R;
+    ctx.globalAlpha=ea;
+    const g=ctx.createLinearGradient(0,H-eh,0,H); g.addColorStop(0,'#5fb0ff'); g.addColorStop(1,'#123f8f');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.fill();
+    ctx.strokeStyle='rgba(140,200,255,.55)'; ctx.lineWidth=8; ctx.beginPath(); ctx.arc(cx,cy,R+4,0,7); ctx.stroke();
+    ctx.fillStyle='rgba(80,170,90,.7)'; ctx.beginPath(); ctx.ellipse(W*.62,H-eh*.45,W*.12,eh*.22,0,0,7); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.4)'; ctx.beginPath(); ctx.ellipse(W*.3,H-eh*.6,W*.1,eh*.1,.1,0,7); ctx.fill();
+    ctx.globalAlpha=1; }
+  // launch site
+  const gy=P.padY+P.cam;
+  if(gy-H*.08<H){
+    const hz=gy-H*.07, land=gy-H*.025;
+    ctx.fillStyle='#2c6aa3'; ctx.fillRect(0,hz,W,land-hz);
+    ctx.fillStyle='#5b6f86'; ctx.fillRect(W*.75,hz-H*.07,W*.06,H*.07); ctx.fillRect(W*.83,hz-H*.03,W*.04,H*.03); ctx.fillRect(W*.1,hz-H*.025,W*.05,H*.025);
+    const lg=ctx.createLinearGradient(0,land,0,H); lg.addColorStop(0,'#6e9a57'); lg.addColorStop(1,'#3b5a2e');
+    ctx.fillStyle=lg; ctx.fillRect(0,land,W,Math.max(0,H-land));
+    ctx.fillStyle='#8d9096'; ctx.fillRect(W*.5-2.5*u,gy-.15*u,5*u,.6*u);
+    // service tower
+    const tx=W*.5-2.6*u, top=gy-9.5*u;
+    ctx.strokeStyle='#c7553a'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(tx,gy); ctx.lineTo(tx,top); ctx.moveTo(tx+u,gy); ctx.lineTo(tx+u,top);
+    for(let y=gy;y>top;y-=u){ ctx.moveTo(tx,y); ctx.lineTo(tx+u,y-u); ctx.moveTo(tx+u,y); ctx.lineTo(tx,y-u); }
+    ctx.stroke();
+    ctx.fillStyle='#c7553a'; ctx.fillRect(tx+u,gy-7.6*u,W*.5-.6*u-(tx+u),.3*u);
+  }
+  // clouds
+  const ca=.85*clamp(1-(P.alt-500)/400,0,1);
+  for(const c of CLOUDS){ const cy=P.padY-c.alt+P.cam; if(ca<=0||cy<-60||cy>H+60) continue;
+    const cx=c.x*W; ctx.fillStyle=`rgba(255,255,255,${ca})`;
+    ctx.beginPath(); ctx.ellipse(cx,cy,c.w,c.w*.28,0,0,7); ctx.ellipse(cx-c.w*.4,cy+4,c.w*.5,c.w*.22,0,0,7); ctx.ellipse(cx+c.w*.35,cy-c.w*.1,c.w*.45,c.w*.25,0,0,7); ctx.fill(); }
+  // smoke
+  for(const q of I.puffs){ ctx.fillStyle=`rgba(235,236,242,${.75*(1-q.t/3)})`; ctx.beginPath(); ctx.arc(q.x,q.y+P.cam,q.r,0,7); ctx.fill(); }
+  // rocket
+  const s=it-INTRO.sep, so=it-INTRO.open, burn=it>=INTRO.lift&&s<0 ? clamp((it-INTRO.lift)/.3,0,1) : 0;
+  const shake=it>INTRO.lift&&it<INTRO.lift+1.5 ? (Math.random()-.5)*3*(1-(it-INTRO.lift)/1.5) : 0;
+  const local=fn=>{ ctx.save(); ctx.translate(P.x+shake,P.y); ctx.rotate(P.rot); ctx.scale(u,u); fn(); ctx.restore(); };
+  local(()=>{
+    if(so<2.2){ ctx.save(); if(so>0){ ctx.globalAlpha=clamp(1-so/2.2,0,1); ctx.translate(0,so*so*.6+so*.8); } drawUpperStage(s>.3&&so<0?1:0); ctx.restore(); }
+    if(s<3){ ctx.save(); if(s>0){ ctx.globalAlpha=clamp(1-s/3,0,1); ctx.translate(0,s*s*.9+s*.6); ctx.rotate(s*.15); } drawLowerStage(burn); ctx.restore(); }
+  });
+  if(so>0){ const [x0,y0]=L2S(P,0,-3.9), e=ease(clamp((it-INTRO.free)/(INTRO.end-INTRO.free),0,1));
+    drawNEAR(lerp(x0,s1.x,e),lerp(y0,s1.y,e),lerp(u*.45,22,e),0,e*.6,'back'); }
+  local(()=>{ for(const side of [-1,1]){ if(so>2.2) continue; ctx.save();
+    if(so>0){ ctx.globalAlpha=clamp(1-so/2.2,0,1); ctx.translate(side*so*1.4,so*.5); ctx.translate(side*.55,-3.2); ctx.rotate(side*so*1.1); ctx.translate(-side*.55,3.2); }
+    drawFairing(side); ctx.restore(); } });
+  // countdown
+  if(!paused && it<INTRO.lift+1.3){
+    const n=it<INTRO.lift ? String(3-Math.floor(it)) : T.liftoff, f=it<INTRO.lift ? it%1 : (it-INTRO.lift)/1.3;
+    ctx.save(); ctx.globalAlpha=1-f*.8; ctx.font=`800 ${Math.round(Math.min(H*.2,W*.25)*(it<INTRO.lift?1.3-f*.3:.6))}px "Baloo 2", Nunito, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.lineWidth=8; ctx.strokeStyle='rgba(10,15,45,.6)'; ctx.strokeText(n,W*.5,H*.36);
+    ctx.fillStyle='#ffc44d'; ctx.fillText(n,W*.5,H*.36); ctx.restore();
+  }
 }
 const S1_EVENTS = [
   {t:16, kind:"mathilde", dur:9, show:.42, icon:"🪨"},
@@ -517,6 +641,7 @@ function yearAt(t){ // map game time to mission date for timeline
 }
 function updateStage1(dt){
   const S=s1;
+  if(S.intro){ updateIntro(S,dt); return; }
   const bst=Math.min(S.boost, dt*4); S.boost-=bst;
   S.t+=dt*TIME_RATE+bst;
   const p=clamp(S.t/S.dur,0,1);
@@ -578,6 +703,7 @@ function updateStage1(dt){
   }
 }
 function drawStage1(t){
+  if(s1.intro){ drawIntro(t); return; }
   const S=s1, p=clamp(S.t/S.dur,0,1);
   bg(); drawStars(S.scroll*.02, t);
   const fk=kind=>{const f=S.fly.find(f=>f.e.kind===kind); return f?f.k:-1;};
