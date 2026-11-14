@@ -253,6 +253,15 @@ $('fact').querySelector('.t').innerHTML = '&#129514; '+T.factUnlocked;
 $('landBtn').innerHTML = T.prepLand;
 document.querySelector('#pad .thr').innerHTML = '&#128293; '+T.thrust;
 
+// ---------- analytics (GoatCounter: cookieless, no consent banner; skips localhost) ----------
+const GOATCOUNTER = 'srk-bogdan'; // your site code, e.g. 'mission-to-eros' → https://mission-to-eros.goatcounter.com
+function track(name){ try{ window.goatcounter?.count?.({path:`${LANG}/${name}`, title:name, event:true}); }catch(e){} }
+if(GOATCOUNTER){
+  const s=document.createElement('script'); s.async=true; s.src='https://gc.zgo.at/count.js';
+  s.dataset.goatcounter=`https://${GOATCOUNTER}.goatcounter.com/count`; s.onload=()=>track('open');
+  document.head.appendChild(s);
+}
+
 function resize(){
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   W = innerWidth; H = innerHeight;
@@ -508,7 +517,7 @@ function startStage1(){
   s1={t:0,dur:62,x:W*.22,y:H*.55,vx:0,vy:0,objs:[],pops:[],boost:0,scroll:0,ep:0,fly:[],spawn:1.2,score:0,fi:0,hit:0,events:new Set(),done:false,
       intro:{t:0,beeps:0,puffs:[]}};
   showCard(T.s1Card(isTouch,STARS_PER_FACT),
-    [{label:T.launchBtn,fn:()=>eventMsg(T.introPad,4500)}]);
+    [{label:T.launchBtn,fn:()=>{ eventMsg(T.introPad,4500); track('launch'); }}]);
 }
 
 // ---------- launch movie: pad → countdown → ascent → separation → NEAR released ----------
@@ -774,7 +783,7 @@ function erosFrame(){
   return {cx:W/2, cy:top+ah/2, s, rot: portrait?Math.PI/2:0, portrait};
 }
 function startStage2(){
-  stage=2; clearMsgs(); $('pad').classList.remove('show');
+  stage=2; clearMsgs(); $('pad').classList.remove('show'); track('stage2');
   s2={t:0,found:new Set(),hover:null};
   showCard(T.s2Card, [{label:T.s2Btn}]);
   hint(T.s2Hint);
@@ -855,7 +864,7 @@ function buildTerrain(){
 }
 function terH(x){ const i=clamp(x/2,0,TER.pts.length-1), a=Math.floor(i), b=Math.min(a+1,TER.pts.length-1); return lerp(TER.pts[a],TER.pts[b],i-a); }
 function startStage3(){
-  stage=3; clearMsgs(); hint(null); buildTerrain();
+  stage=3; clearMsgs(); hint(null); buildTerrain(); track('stage3');
   $('pad').classList.toggle('show', isTouch);
   s3={x:70,y:START_ALT,vx:2.2,vy:-2.5,fuel:100,state:'fly',t:0,photos:0,lastPhoto:0,flash:0,thrust:false};
   showCard(T.s3Card(isTouch,num(SAFE_KMH,1)), [{label:T.s3Btn}]);
@@ -891,7 +900,7 @@ function updateStage3(dt){
     const z=TER.zone, inZone=S.x>=z.x0&&S.x<=z.x1;
     S.y=terH(S.x)+4;
     if(kmh<=SAFE_KMH && inZone){ S.state='won'; S.photos=69; chime(); setTimeout(()=>beep(1320,.3),220); setTimeout(()=>winCard(kmh),700); }
-    else { S.state='crash'; S.crashKmh=kmh; beep(90,.5,'sawtooth',.12);
+    else { S.state='crash'; S.crashKmh=kmh; beep(90,.5,'sawtooth',.12); track('crash');
       const why = kmh>SAFE_KMH ? T.crashFast(num(kmh,1)) : T.crashRocky(num(kmh,1));
       setTimeout(()=>showCard(T.crashCard(why),
         [{label:T.tryAgain,fn:startStage3Quick},{label:T.backToStart,ghost:true,fn:titleScreen}]),900);
@@ -900,7 +909,7 @@ function updateStage3(dt){
 }
 function startStage3Quick(){ buildTerrain(); s3={x:70,y:START_ALT,vx:2.2,vy:-2.5,fuel:100,state:'fly',t:0,photos:0,lastPhoto:0,flash:0,thrust:false}; }
 function winCard(kmh){
-  $('pad').classList.remove('show');
+  $('pad').classList.remove('show'); track('landed');
   showCard(T.winCard(num(kmh,1)),
     [{label:T.playAgain,fn:titleScreen},{label:T.landAgain,ghost:true,fn:startStage3}]);
 }
