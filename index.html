@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Mission to Eros</title>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#070b24;--panel:rgba(14,22,58,.92);--line:rgba(140,170,255,.25);--amber:#ffc44d;--cyan:#5ee0ff;--green:#5df29a;--red:#ff6b6b;--text:#eef2ff;--muted:#a9b4dd}
   *{box-sizing:border-box;margin:0;padding:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
   button{touch-action:manipulation}
-  html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Baloo 2',system-ui,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none}
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Baloo 2','Nunito',system-ui,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none}
   canvas{display:block;position:fixed;inset:0}
   #hud{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:12px 16px;pointer-events:none;gap:12px}
   .chip{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 14px;font-weight:700;font-size:16px;line-height:1.2}
@@ -75,6 +75,177 @@ const $ = id => document.getElementById(id);
 
 function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 const lerp=(a,b,t)=>a+(b-a)*t, clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+// ---------- i18n (?language=ua → Ukrainian, otherwise English) ----------
+const LANG = new URLSearchParams(location.search).get('language')==='ua' ? 'ua' : 'en';
+const I18N = {
+  en:{
+    title:'Mission to Eros', stage:'Stage', factUnlocked:'Fact unlocked!', prepLand:'Prepare to land &rarr;', thrust:'Thrust',
+    eros:'Eros', mathilde:'Mathilde', earth:'Earth', launch:'Launch', launchLong:'1996 Launch',
+    // stage 1
+    s1Card:(touch,n)=>`<div class="kicker">Stage 1 of 3</div><h2>Approach Eros</h2>
+    <p>You're the pilot of <b>NEAR Shoemaker</b>, launched from Earth in 1996! Fly toward the asteroid <b>Eros</b>.</p><p>Every <b>science flask</b> you catch <b>boosts your engine</b> — the more you collect, the faster you get there!</p>
+    <ul><li>${touch?'<b>Drag your finger</b> to fly':'Fly with the <b>arrow keys</b> — or drag with the mouse'}</li><li>Collect <span style="color:#9ff0ff">&#129514; flasks</span> to speed up — every ${n} also unlock a fact</li><li>Dodge the space rocks</li></ul>`,
+    launchBtn:'Launch! 🚀',
+    facts:[
+      "<b>Asteroids</b> are rocky leftovers from when the planets formed, about <b>4.5 billion years</b> ago.",
+      "Most asteroids live in the <b>asteroid belt</b> between Mars and Jupiter. Eros is a <b>near-Earth asteroid</b> — its path comes closer to us.",
+      "Asteroids aren't round like planets. They're too small for gravity to squeeze them into balls, so they're lumpy!",
+      "<b>Eros</b> is shaped a bit like a <b>peanut</b> and is about <b>34 km (21 miles)</b> long — as long as a big city.",
+      "NEAR stands for <b>Near Earth Asteroid Rendezvous</b>. It was later named after scientist <b>Gene Shoemaker</b>.",
+      "NEAR carried a camera, a laser to measure height, and tools to sniff out what Eros is made of.",
+      "Eros is about as dense as the rocks in <b>Earth's crust</b>.",
+      "Space is huge! At one point Eros and NEAR were about <b>355 million km</b> from Earth."
+    ],
+    events:{
+      mathilde:{date:"June 27, 1997", title:"Flying past Mathilde",
+        msg:"NEAR zoomed past another asteroid called <b>Mathilde</b> and photographed it. It's <b>covered in craters</b> — and lighter than scientists expected, almost like it's full of holes!"},
+      earth:{date:"January 23, 1998", title:"Slingshot around Earth",
+        msg:"NEAR swung back past <b>Earth</b>. Earth's gravity pulled on the spacecraft and flung it onto a new path toward Eros — like a <b>slingshot</b>, with no fuel needed!"},
+      erospass:{date:"December 20, 1998", title:"Uh-oh, engine trouble!",
+        msg:"A big engine burn <b>stopped too early</b>, so NEAR flew right past Eros. The team didn't give up — they planned a loop around the Sun and tried again <b>one year later</b>."}
+    },
+    milestone:'Milestone', continueBtn:'Continue &#9654;',
+    hud1:'1 · Approach Eros', hudDate:'Date', hudNextFact:'Next fact', hudFacts:'Facts',
+    s1Win:(score,fi)=>`<div class="kicker">February 14, 2000</div><h2>You reached Eros! 🎉</h2>
+      <p>NEAR Shoemaker became the <b>first spacecraft ever to orbit an asteroid</b>.</p>
+      <p>Look at its shape — Eros is long and lumpy, about <b>34 km</b> from end to end. You collected <b>${score} science flasks</b> and unlocked <b>${fi} fact${fi===1?'':'s'}</b>.</p>`,
+    exploreBtn:'Explore Eros &rarr;',
+    // stage 2
+    spots:{
+      psyche:{title:'Psyche Crater',
+        text:"This is the <b>biggest crater</b> on Eros — about <b>5 km wide</b>! Long ago, another space rock smashed into Eros here. Craters are like scars that tell us about crashes in space."},
+      himeros:{title:'Himeros, the Saddle',
+        text:"See how Eros pinches in the middle? This big dip is called <b>Himeros</b>, and it's shaped like a horse's <b>saddle</b>. NEAR would later land just south of it!"},
+      boulders:{title:'Boulder Field',
+        text:"Eros is sprinkled with <b>boulders</b> — some as big as a house! Many were probably thrown out when big craters formed, then fell back down."},
+      ridge:{title:'The Long Ridge',
+        text:"A long <b>ridge</b> stretches across the surface. Scientists think it's a giant crack, a clue that Eros is <b>one solid rock</b> and not a loose pile of rubble."},
+      pond:{title:'Dust Ponds',
+        text:"Some craters have flat, smooth floors called <b>ponds</b>. They're not water — they're filled with super-fine <b>dust</b> that slid down and settled at the bottom."},
+      gravity:{title:'Super-Weak Gravity',
+        text:"Gravity on Eros is <b>more than 1,000 times weaker</b> than on Earth. A strong jump might send you flying off into space! Also, NEAR found that Eros has <b>no magnetic field</b>."}
+    },
+    s2Card:`<div class="kicker">Stage 2 of 3</div><h2>Explore the asteroid</h2>
+    <p>NEAR spent a whole year circling Eros and took <b>160,000 pictures</b> — about 10 times more data than planned!</p>
+    <p><b>Tap the glowing rings</b> to scan the surface. Find all <b>6 discoveries</b> to unlock the landing.</p>`,
+    s2Btn:'Start scanning 🔍', s2Hint:'Tap or click the glowing rings',
+    discovery:(n,total,first)=>`Discovery ${n} of ${total}${first?'':' (again)'}`,
+    allFound:'All found! Continue &rarr;', keepExploring:'Keep exploring',
+    hud2:'2 · Explore Eros', hudDiscoveries:'Discoveries',
+    // stage 3
+    s3Card:(touch,safe)=>`<div class="kicker">Stage 3 of 3 · February 12, 2001</div><h2>Land on Eros</h2>
+    <p>NEAR was <b>never built to land</b> — but the team decided to try! Bring it down gently.</p>
+    <ul><li>${touch?'Hold <b>&#128293; Thrust</b>':'<b>&#9650;</b> (or Space)'} fires the thruster to slow down</li><li><b>&#9664; &#9654;</b> nudge sideways</li><li>Touch down in the <span style="color:#5df29a"><b>green zone</b></span> slower than <b>${safe} km/h</b></li></ul>
+    <p style="font-size:15px;color:#a9b4dd">Gravity on Eros is very weak, so we've sped up time to make it a challenge.</p>`,
+    s3Btn:'Begin descent ⬇️',
+    hud3:'3 · Land on Eros', hudSpeed:'Speed', hudAlt:'Altitude', hudFuel:'Fuel', hudPhotos:'Photos', kmh:'km/h', m:'m',
+    crashFast:k=>`You hit the ground at <b>${k} km/h</b> — too fast! Hold &#9650; longer to slow down.`,
+    crashRocky:k=>`Nice and gentle at ${k} km/h, but you landed on bumpy, rocky ground. Aim for the <b>green zone</b>.`,
+    crashCard:why=>`<div class="kicker">Mission control</div><h2>Oops! Let's try again</h2><p>${why}</p><p style="font-size:15px;color:#a9b4dd">Tip: slow down early, while you're still high up. Watch the speed turn green.</p>`,
+    tryAgain:'Try again ↻', backToStart:'Back to start',
+    winCard:k=>`<div class="kicker">February 12, 2001 · Mission complete</div><div class="big">🏅</div><h2>You landed on Eros!</h2>
+    <p>Touchdown at <b>${k} km/h</b>. The real NEAR touched down at about <b>6.4 km/h</b> — slower than a jog!</p>
+    <ul><li>It was the <b>first spacecraft ever to land on an asteroid</b>.</li>
+    <li>It snapped <b>69 close-up photos</b> on the way down.</li>
+    <li>Even though it wasn't built to land, it survived and kept sending science for about <b>two weeks</b>.</li></ul>`,
+    playAgain:'Play again ↻', landAgain:'Land again',
+    zone:'Landing zone · near Himeros', gaugeSpeed:'SPEED',
+    // title
+    titleCard:`<div class="kicker">A NASA-inspired space adventure</div><h1>Mission to Eros</h1>
+    <p>Fly the real <b>NEAR Shoemaker</b> spacecraft to a giant space rock, explore its craters and boulders, and try to <b>land on an asteroid</b> — just like NASA did in 2001!</p>
+    <p style="font-size:15px;color:#a9b4dd">3 stages · about 5 minutes · keyboard, mouse or touch</p>
+    <div class="jump">Demo shortcuts: <a href="#" data-j="2" style="color:#5ee0ff">Stage 2</a> · <a href="#" data-j="3" style="color:#5ee0ff">Stage 3</a></div>`,
+    startBtn:'Start mission 🚀'
+  },
+  ua:{
+    title:'Місія до Ероса', stage:'Етап', factUnlocked:'Новий факт!', prepLand:'Готуйся до посадки &rarr;', thrust:'Тяга',
+    eros:'Ерос', mathilde:'Матильда', earth:'Земля', launch:'Старт', launchLong:'Старт 1996',
+    // stage 1
+    s1Card:(touch,n)=>`<div class="kicker">Етап 1 з 3</div><h2>Політ до Ероса</h2>
+    <p>Ти — пілот космічного апарата <b>NEAR Shoemaker</b>, запущеного із Землі у 1996 році! Лети до астероїда <b>Ерос</b>.</p><p>Кожна <b>наукова колба</b>, яку ти зловиш, <b>розганяє двигун</b> — що більше збереш, то швидше долетиш!</p>
+    <ul><li>${touch?'<b>Веди пальцем</b>, щоб керувати':'Керуй <b>стрілками</b> — або веди мишкою'}</li><li>Збирай <span style="color:#9ff0ff">&#129514; колби</span>, щоб пришвидшитися — кожні ${n} відкривають факт</li><li>Ухиляйся від космічних каменів</li></ul>`,
+    launchBtn:'Старт! 🚀',
+    facts:[
+      "<b>Астероїди</b> — це кам'яні залишки з часів, коли формувалися планети, приблизно <b>4,5 мільярда років</b> тому.",
+      "Більшість астероїдів живе в <b>поясі астероїдів</b> між Марсом і Юпітером. Ерос — <b>навколоземний астероїд</b>: його шлях пролягає ближче до нас.",
+      "Астероїди не круглі, як планети. Вони замалі, щоб гравітація стиснула їх у кулі, тому вони нерівні й горбкуваті!",
+      "<b>Ерос</b> трохи схожий на <b>арахіс</b> і завдовжки близько <b>34 км</b> — як велике місто.",
+      "NEAR означає <b>Near Earth Asteroid Rendezvous</b> — «Зустріч із навколоземним астероїдом». Згодом апарат назвали на честь науковця <b>Юджина Шумейкера</b>.",
+      "NEAR мав камеру, лазер для вимірювання висоти та прилади, що «винюхували», з чого складається Ерос.",
+      "Ерос приблизно такий самий щільний, як гірські породи <b>земної кори</b>.",
+      "Космос величезний! Одного разу Ерос і NEAR були приблизно за <b>355 мільйонів км</b> від Землі."
+    ],
+    events:{
+      mathilde:{date:"27 червня 1997", title:"Проліт повз Матильду",
+        msg:"NEAR промчав повз інший астероїд — <b>Матильду</b> — і сфотографував його. Він <b>весь у кратерах</b> і легший, ніж очікували науковці, — ніби повний дірок!"},
+      earth:{date:"23 січня 1998", title:"Рогатка біля Землі",
+        msg:"NEAR знову пролетів повз <b>Землю</b>. Земна гравітація потягнула апарат і закинула його на новий шлях до Ероса — як <b>рогатка</b>, без жодного палива!"},
+      erospass:{date:"20 грудня 1998", title:"Ой, проблема з двигуном!",
+        msg:"Під час важливого маневру двигун <b>вимкнувся зарано</b>, тож NEAR пролетів повз Ерос. Команда не здалася — вона спланувала петлю навколо Сонця й спробувала знову <b>через рік</b>."}
+    },
+    milestone:'Важлива подія', continueBtn:'Далі &#9654;',
+    hud1:'1 · Політ до Ероса', hudDate:'Рік', hudNextFact:'Наступний факт', hudFacts:'Факти',
+    s1Win:(score,fi)=>`<div class="kicker">14 лютого 2000</div><h2>Ти біля Ероса! 🎉</h2>
+      <p>NEAR Shoemaker став <b>першим космічним апаратом, що вийшов на орбіту астероїда</b>.</p>
+      <p>Подивись на його форму — Ерос довгий і горбкуватий, близько <b>34 км</b> від краю до краю. Зібрано наукових колб: <b>${score}</b>, відкрито фактів: <b>${fi}</b>.</p>`,
+    exploreBtn:'Досліджувати Ерос &rarr;',
+    // stage 2
+    spots:{
+      psyche:{title:'Кратер Псіхея',
+        text:"Це <b>найбільший кратер</b> на Еросі — близько <b>5 км завширшки</b>! Колись давно сюди врізався інший космічний камінь. Кратери — наче шрами, що розповідають про зіткнення в космосі."},
+      himeros:{title:'Гімерос, «сідло»',
+        text:"Бачиш, як Ерос звужується посередині? Ця велика западина називається <b>Гімерос</b> і має форму кінського <b>сідла</b>. Згодом NEAR сяде трохи південніше від неї!"},
+      boulders:{title:'Поле валунів',
+        text:"Ерос усипаний <b>валунами</b> — деякі завбільшки з будинок! Багато з них, імовірно, викинуло, коли утворювалися великі кратери, а потім вони впали назад."},
+      ridge:{title:'Довгий хребет',
+        text:"Поверхнею тягнеться довгий <b>хребет</b>. Науковці вважають, що це гігантська тріщина — підказка, що Ерос є <b>суцільною скелею</b>, а не купою уламків."},
+      pond:{title:'Пилові «ставки»',
+        text:"У деяких кратерах пласке гладеньке дно — це <b>«ставки»</b>. Води там немає — вони заповнені надзвичайно дрібним <b>пилом</b>, що зісковзнув униз і осів на дні."},
+      gravity:{title:'Надслабка гравітація',
+        text:"Гравітація на Еросі <b>більш ніж у 1000 разів слабша</b>, ніж на Землі. Сильно стрибнеш — і можеш полетіти в космос! А ще NEAR з'ясував, що Ерос <b>не має магнітного поля</b>."}
+    },
+    s2Card:`<div class="kicker">Етап 2 з 3</div><h2>Досліди астероїд</h2>
+    <p>NEAR цілий рік кружляв навколо Ероса і зробив <b>160 000 фотографій</b> — приблизно в 10 разів більше даних, ніж планували!</p>
+    <p><b>Торкайся сяйливих кілець</b>, щоб сканувати поверхню. Знайди всі <b>6 відкриттів</b>, щоб розблокувати посадку.</p>`,
+    s2Btn:'Почати сканування 🔍', s2Hint:'Торкнись або клацни сяйливе кільце',
+    discovery:(n,total,first)=>`Відкриття ${n} з ${total}${first?'':' (повторно)'}`,
+    allFound:'Усе знайдено! Далі &rarr;', keepExploring:'Досліджувати далі',
+    hud2:'2 · Дослідження Ероса', hudDiscoveries:'Відкриття',
+    // stage 3
+    s3Card:(touch,safe)=>`<div class="kicker">Етап 3 з 3 · 12 лютого 2001</div><h2>Посадка на Ерос</h2>
+    <p>NEAR <b>ніколи не створювали для посадки</b> — але команда вирішила спробувати! Опусти його обережно.</p>
+    <ul><li>${touch?'Утримуй <b>&#128293; Тяга</b>':'<b>&#9650;</b> (або Пробіл)'}, щоб увімкнути двигун і гальмувати</li><li><b>&#9664; &#9654;</b> зсувають убік</li><li>Сідай у <span style="color:#5df29a"><b>зелену зону</b></span> зі швидкістю менше <b>${safe} км/год</b></li></ul>
+    <p style="font-size:15px;color:#a9b4dd">Гравітація на Еросі дуже слабка, тож ми пришвидшили час, щоб було цікавіше.</p>`,
+    s3Btn:'Почати спуск ⬇️',
+    hud3:'3 · Посадка на Ерос', hudSpeed:'Швидкість', hudAlt:'Висота', hudFuel:'Пальне', hudPhotos:'Фото', kmh:'км/год', m:'м',
+    crashFast:k=>`Удар об поверхню на швидкості <b>${k} км/год</b> — надто швидко! Утримуй &#9650; довше, щоб сповільнитися.`,
+    crashRocky:k=>`М'яко — ${k} км/год, але це нерівний кам'янистий ґрунт. Цілься в <b>зелену зону</b>.`,
+    crashCard:why=>`<div class="kicker">Центр керування польотом</div><h2>Ой! Спробуймо ще раз</h2><p>${why}</p><p style="font-size:15px;color:#a9b4dd">Порада: гальмуй завчасно, поки ще високо. Стеж, щоб швидкість стала зеленою.</p>`,
+    tryAgain:'Ще раз ↻', backToStart:'На початок',
+    winCard:k=>`<div class="kicker">12 лютого 2001 · Місію виконано</div><div class="big">🏅</div><h2>Ти на Еросі!</h2>
+    <p>Посадка на швидкості <b>${k} км/год</b>. Справжній NEAR сів зі швидкістю близько <b>6,4 км/год</b> — повільніше, ніж біг підтюпцем!</p>
+    <ul><li>Це був <b>перший космічний апарат, що сів на астероїд</b>.</li>
+    <li>Під час спуску він зробив <b>69 близьких фото</b>.</li>
+    <li>Хоч його й не створювали для посадки, він уцілів і ще приблизно <b>два тижні</b> надсилав наукові дані.</li></ul>`,
+    playAgain:'Грати знову ↻', landAgain:'Сісти ще раз',
+    zone:'Зона посадки · біля Гімероса', gaugeSpeed:'ШВИДКІСТЬ',
+    // title
+    titleCard:`<div class="kicker">Космічна пригода за мотивами місії NASA</div><h1>Місія до Ероса</h1>
+    <p>Керуй справжнім апаратом <b>NEAR Shoemaker</b>: долети до велетенського космічного каменя, досліди його кратери й валуни та спробуй <b>сісти на астероїд</b> — так, як це зробили в NASA у 2001 році!</p>
+    <p style="font-size:15px;color:#a9b4dd">3 етапи · близько 5 хвилин · клавіатура, мишка або дотик</p>
+    <div class="jump">Швидкий перехід: <a href="#" data-j="2" style="color:#5ee0ff">Етап 2</a> · <a href="#" data-j="3" style="color:#5ee0ff">Етап 3</a></div>`,
+    startBtn:'Почати місію 🚀'
+  }
+};
+const T = I18N[LANG];
+const num = (v,d) => LANG==='ua' ? v.toFixed(d).replace('.',',') : v.toFixed(d);
+document.documentElement.lang = LANG==='ua' ? 'uk' : 'en';
+document.title = T.title;
+$('hudL').querySelector('small').textContent = T.stage;
+$('fact').querySelector('.t').innerHTML = '&#129514; '+T.factUnlocked;
+$('landBtn').innerHTML = T.prepLand;
+document.querySelector('#pad .thr').innerHTML = '&#128293; '+T.thrust;
 
 function resize(){
   const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -320,16 +491,7 @@ function drawFlask(x,y,r,t,seed){
 // STAGE 1: APPROACH
 // =====================================================================
 const STARS_PER_FACT = 10;
-const S1_FACTS = [
-  "<b>Asteroids</b> are rocky leftovers from when the planets formed, about <b>4.5 billion years</b> ago.",
-  "Most asteroids live in the <b>asteroid belt</b> between Mars and Jupiter. Eros is a <b>near-Earth asteroid</b> — its path comes closer to us.",
-  "Asteroids aren't round like planets. They're too small for gravity to squeeze them into balls, so they're lumpy!",
-  "<b>Eros</b> is shaped a bit like a <b>peanut</b> and is about <b>34 km (21 miles)</b> long — as long as a big city.",
-  "NEAR stands for <b>Near Earth Asteroid Rendezvous</b>. It was later named after scientist <b>Gene Shoemaker</b>.",
-  "NEAR carried a camera, a laser to measure height, and tools to sniff out what Eros is made of.",
-  "Eros is about as dense as the rocks in <b>Earth's crust</b>.",
-  "Space is huge! At one point Eros and NEAR were about <b>355 million km</b> from Earth."
-];
+const S1_FACTS = T.facts;
 let s1, drag1=null;
 cv.addEventListener('pointerdown',e=>{ if(stage===1&&!paused){ drag1={x:e.clientX,y:e.clientY,touch:e.pointerType!=='mouse'}; } });
 cv.addEventListener('pointermove',e=>{ if(drag1) { drag1.x=e.clientX; drag1.y=e.clientY; } });
@@ -338,19 +500,14 @@ function startStage1(){
   stage=1; clearMsgs(); hint(null); $('landBtn').style.display='none';
   $('pad').classList.remove('show');
   s1={t:0,dur:62,x:W*.22,y:H*.55,vx:0,vy:0,objs:[],pops:[],boost:0,scroll:0,ep:0,fly:[],spawn:1.2,score:0,fi:0,hit:0,events:new Set(),done:false};
-  showCard(`<div class="kicker">Stage 1 of 3</div><h2>Approach Eros</h2>
-    <p>You're the pilot of <b>NEAR Shoemaker</b>, launched from Earth in 1996! Fly toward the asteroid <b>Eros</b>.</p><p>Every <b>science flask</b> you catch <b>boosts your engine</b> — the more you collect, the faster you get there!</p>
-    <ul><li>${isTouch?'<b>Drag your finger</b> to fly':'Fly with the <b>arrow keys</b> — or drag with the mouse'}</li><li>Collect <span style="color:#9ff0ff">&#129514; flasks</span> to speed up — every ${STARS_PER_FACT} also unlock a fact</li><li>Dodge the space rocks</li></ul>`,
-    [{label:'Launch! 🚀',fn:()=>{beep(220,.4,'sawtooth',.08)}}]);
+  showCard(T.s1Card(isTouch,STARS_PER_FACT),
+    [{label:T.launchBtn,fn:()=>{beep(220,.4,'sawtooth',.08)}}]);
 }
 const S1_EVENTS = [
-  {t:16, kind:"mathilde", dur:9, show:.42, date:"June 27, 1997", icon:"🪨", title:"Flying past Mathilde",
-   msg:"NEAR zoomed past another asteroid called <b>Mathilde</b> and photographed it. It's <b>covered in craters</b> — and lighter than scientists expected, almost like it's full of holes!"},
-  {t:30, kind:"earth", dur:9, show:.42, date:"January 23, 1998", icon:"🌍", title:"Slingshot around Earth",
-   msg:"NEAR swung back past <b>Earth</b>. Earth's gravity pulled on the spacecraft and flung it onto a new path toward Eros — like a <b>slingshot</b>, with no fuel needed!"},
-  {t:43, kind:"erospass", dur:6, show:.5, date:"December 20, 1998", icon:"⚠️", title:"Uh-oh, engine trouble!",
-   msg:"A big engine burn <b>stopped too early</b>, so NEAR flew right past Eros. The team didn't give up — they planned a loop around the Sun and tried again <b>one year later</b>."}
-];
+  {t:16, kind:"mathilde", dur:9, show:.42, icon:"🪨"},
+  {t:30, kind:"earth", dur:9, show:.42, icon:"🌍"},
+  {t:43, kind:"erospass", dur:6, show:.5, icon:"⚠️"}
+].map(e=>({...e,...T.events[e.kind]}));
 const TIME_RATE = 0.33;   // mission clock speed on its own (slow)
 const FLASK_BOOST = 2.2;  // mission seconds each flask adds (spread smoothly)
 function yearAt(t){ // map game time to mission date for timeline
@@ -382,8 +539,8 @@ function updateStage1(dt){
     f.k+=dt/f.e.dur;
     if(!f.shown && f.k>=f.e.show){
       f.shown=true; S.boost=0; drag1=null; for(const k in keys) keys[k]=false; beep(440,.15,'triangle',.08);
-      showCard(`<div class="kicker">Milestone · ${f.e.date}</div><div class="big">${f.e.icon}</div><h2>${f.e.title}</h2><p>${f.e.msg}</p>`,
-        [{label:'Continue &#9654;'}], 'milestone');
+      showCard(`<div class="kicker">${T.milestone} · ${f.e.date}</div><div class="big">${f.e.icon}</div><h2>${f.e.title}</h2><p>${f.e.msg}</p>`,
+        [{label:T.continueBtn}], 'milestone');
       return;
     }
   }
@@ -413,13 +570,11 @@ function updateStage1(dt){
   const yr=yearAt(S.t);
   for(const q of S.pops) q.t+=dt; S.pops=S.pops.filter(q=>q.t<.8);
   const m=S.score%STARS_PER_FACT;
-  setHUD('1 · Approach Eros', `<div class="chip"><small>Date</small>${Math.floor(yr)}</div><div class="chip"><small>Next fact</small>&#129514; ${m} / ${STARS_PER_FACT}<div class="meter"><i style="width:${m/STARS_PER_FACT*100}%"></i></div></div><div class="chip"><small>Facts</small>📖 ${S.fi}</div>`);
+  setHUD(T.hud1, `<div class="chip"><small>${T.hudDate}</small>${Math.floor(yr)}</div><div class="chip"><small>${T.hudNextFact}</small>&#129514; ${m} / ${STARS_PER_FACT}<div class="meter"><i style="width:${m/STARS_PER_FACT*100}%"></i></div></div><div class="chip"><small>${T.hudFacts}</small>📖 ${S.fi}</div>`);
   if(S.t>=S.dur && !S.done && !S.fly.length && S.ep>.97){
     S.done=true; clearMsgs(); chime();
-    showCard(`<div class="kicker">February 14, 2000</div><h2>You reached Eros! 🎉</h2>
-      <p>NEAR Shoemaker became the <b>first spacecraft ever to orbit an asteroid</b>.</p>
-      <p>Look at its shape — Eros is long and lumpy, about <b>34 km</b> from end to end. You collected <b>${S.score} science flasks</b> and unlocked <b>${S.fi} fact${S.fi===1?'':'s'}</b>.</p>`,
-      [{label:'Explore Eros &rarr;',fn:startStage2}]);
+    showCard(T.s1Win(S.score,S.fi),
+      [{label:T.exploreBtn,fn:startStage2}]);
   }
 }
 function drawStage1(t){
@@ -430,34 +585,34 @@ function drawStage1(t){
   { const k=fk('mathilde'); if(k>=0){ const mx=lerp(W+80,-80,k), my=H*.25;
     const mr=Math.min(48,H*.07); drawRock(mx,my,mr,S.scroll*.3,99,'#6a6663');
     for(let i=0;i<6;i++){ctx.fillStyle='rgba(0,0,0,.35)';ctx.beginPath();ctx.arc(mx+(i%3-1)*mr*.45,my+(i<3?-1:1)*mr*.25,mr*(.1+(i%3)*.05),0,7);ctx.fill();}
-    label(mx,my+mr+18,'Mathilde'); }}
+    label(mx,my+mr+18,T.mathilde); }}
   // Earth flyby (t 24-40)
   { const k=fk('earth'); if(k>=0){ const ex=lerp(W+140,-140,k), ey=Math.max(150,H*.3), er=Math.min(90,H*.12);
     const g=ctx.createRadialGradient(ex-er*.3,ey-er*.3,er*.1,ex,ey,er); g.addColorStop(0,'#8fd3ff'); g.addColorStop(.6,'#2b6fd6'); g.addColorStop(1,'#0b2a66');
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,er,0,7); ctx.fill();
     ctx.fillStyle='rgba(80,180,90,.8)'; ctx.beginPath(); ctx.ellipse(ex-er*.2,ey-er*.1,er*.35,er*.22,.5,0,7); ctx.fill(); ctx.beginPath(); ctx.ellipse(ex+er*.35,ey+er*.25,er*.2,er*.3,-.3,0,7); ctx.fill();
     ctx.strokeStyle='rgba(140,200,255,.4)'; ctx.lineWidth=6; ctx.beginPath(); ctx.arc(ex,ey,er+4,0,7); ctx.stroke();
-    label(ex,ey+er+20,'Earth'); }}
+    label(ex,ey+er+20,T.earth); }}
   // Eros grows (passes by once during the missed burn, then grows for real)
   let es = lerp(3, Math.min(W*.3,H*.42), Math.pow(S.ep,3.2));
   { const k=fk('erospass'); if(k>=0) es = Math.max(es, Math.min(70,H*.1)*Math.sin(k*Math.PI)); }
   const ex=W*.76, ey=H*.42;
   drawEros(ex,ey,es,-.35+S.scroll*.04,true);
-  if(es>8) label(ex,ey+es*.5+26,'Eros');
+  if(es>8) label(ex,ey+es*.5+26,T.eros);
   // objects
   for(const o of S.objs){ if(o.type==='star') drawFlask(o.x,o.y,o.r*1.5,o.rot,o.seed); else drawRock(o.x,o.y,o.r,o.rot,o.seed); }
   // ship
   const thrusting = keys.up||keys.down||keys.right||!!drag1;
   ctx.globalAlpha = S.hit>0 && Math.floor(S.hit*20)%2 ? .4 : 1;
   drawNEAR(S.x,S.y,22,0,.6+(thrusting?.6:0),'back');
-  ctx.font='800 20px "Baloo 2", sans-serif'; ctx.textAlign='center';
+  ctx.font='800 20px "Baloo 2", Nunito, sans-serif'; ctx.textAlign='center';
   for(const q of S.pops){ ctx.fillStyle=`rgba(159,240,255,${1-q.t/.8})`; ctx.fillText('+1',q.x,q.y-q.t*50); }
   ctx.globalAlpha=1;
   // timeline
   drawTimeline(S.t);
 }
 function label(x,y,txt){
-  ctx.font='700 15px "Baloo 2", sans-serif'; ctx.textAlign='center';
+  ctx.font='700 15px "Baloo 2", Nunito, sans-serif'; ctx.textAlign='center';
   ctx.fillStyle='rgba(10,15,45,.7)'; const w=ctx.measureText(txt).width+16; ctx.fillRect(x-w/2,y-13,w,22);
   ctx.fillStyle='#ffd88a'; ctx.fillText(txt,x,y+3);
 }
@@ -466,8 +621,8 @@ function drawTimeline(t){
   ctx.strokeStyle='rgba(160,180,255,.3)'; ctx.lineWidth=4; ctx.lineCap='round';
   ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke();
   ctx.strokeStyle='#ffc44d'; ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(lerp(x0,x1,p),y); ctx.stroke();
-  const marks=[[0,W<500?'Launch':'1996 Launch'],[16,'Mathilde'],[30,'Earth'],[62,'Eros']];
-  ctx.font='600 12px "Baloo 2", sans-serif'; ctx.textAlign='center';
+  const marks=[[0,W<500?T.launch:T.launchLong],[16,T.mathilde],[30,T.earth],[62,T.eros]];
+  ctx.font='600 12px "Baloo 2", Nunito, sans-serif'; ctx.textAlign='center';
   for(const [mt,l] of marks){const mx=lerp(x0,x1,mt/62); ctx.fillStyle=t>=mt?'#ffc44d':'#6b78a8'; ctx.beginPath(); ctx.arc(mx,y,5,0,7); ctx.fill(); ctx.fillStyle='#a9b4dd'; ctx.fillText(l,mx,y-10);}
 }
 
@@ -475,19 +630,13 @@ function drawTimeline(t){
 // STAGE 2: EXPLORE
 // =====================================================================
 const SPOTS = [
-  {id:'psyche', x:-0.45,y:-0.02, title:'Psyche Crater', icon:'🕳️',
-   text:"This is the <b>biggest crater</b> on Eros — about <b>5 km wide</b>! Long ago, another space rock smashed into Eros here. Craters are like scars that tell us about crashes in space."},
-  {id:'himeros', x:0.03,y:-0.2, title:'Himeros, the Saddle', icon:'🐴',
-   text:"See how Eros pinches in the middle? This big dip is called <b>Himeros</b>, and it's shaped like a horse's <b>saddle</b>. NEAR would later land just south of it!"},
-  {id:'boulders', x:0.5,y:0.12, title:'Boulder Field', icon:'🪨',
-   text:"Eros is sprinkled with <b>boulders</b> — some as big as a house! Many were probably thrown out when big craters formed, then fell back down."},
-  {id:'ridge', x:0.5,y:-0.17, title:'The Long Ridge', icon:'⛰️',
-   text:"A long <b>ridge</b> stretches across the surface. Scientists think it's a giant crack, a clue that Eros is <b>one solid rock</b> and not a loose pile of rubble."},
-  {id:'pond', x:-0.74,y:0.09, title:'Dust Ponds', icon:'🏖️',
-   text:"Some craters have flat, smooth floors called <b>ponds</b>. They're not water — they're filled with super-fine <b>dust</b> that slid down and settled at the bottom."},
-  {id:'gravity', x:-0.12,y:0.2, title:'Super-Weak Gravity', icon:'🪶',
-   text:"Gravity on Eros is <b>more than 1,000 times weaker</b> than on Earth. A strong jump might send you flying off into space! Also, NEAR found that Eros has <b>no magnetic field</b>."}
-];
+  {id:'psyche', x:-0.45,y:-0.02, icon:'🕳️'},
+  {id:'himeros', x:0.03,y:-0.2, icon:'🐴'},
+  {id:'boulders', x:0.5,y:0.12, icon:'🪨'},
+  {id:'ridge', x:0.5,y:-0.17, icon:'⛰️'},
+  {id:'pond', x:-0.74,y:0.09, icon:'🏖️'},
+  {id:'gravity', x:-0.12,y:0.2, icon:'🪶'}
+].map(sp=>({...sp,...T.spots[sp.id]}));
 let s2;
 // Fit Eros into the free area between the HUD (top) and hint (bottom).
 // On tall / portrait screens, stand Eros upright so it fills the space.
@@ -501,11 +650,8 @@ function erosFrame(){
 function startStage2(){
   stage=2; clearMsgs(); $('pad').classList.remove('show');
   s2={t:0,found:new Set(),hover:null};
-  showCard(`<div class="kicker">Stage 2 of 3</div><h2>Explore the asteroid</h2>
-    <p>NEAR spent a whole year circling Eros and took <b>160,000 pictures</b> — about 10 times more data than planned!</p>
-    <p><b>Tap the glowing rings</b> to scan the surface. Find all <b>6 discoveries</b> to unlock the landing.</p>`,
-    [{label:'Start scanning 🔍'}]);
-  hint('Tap or click the glowing rings');
+  showCard(T.s2Card, [{label:T.s2Btn}]);
+  hint(T.s2Hint);
 }
 function spotXY(sp){ const f=erosFrame(); return f.portrait ? [f.cx-sp.y*f.s, f.cy+sp.x*f.s] : [f.cx+sp.x*f.s, f.cy+sp.y*f.s]; }
 function spotR(){ const f=erosFrame(); return clamp(f.s*.05, isTouch?22:16, 34); }
@@ -516,8 +662,8 @@ cv.addEventListener('pointerdown',e=>{
   const sp=pickSpot(e.clientX,e.clientY); if(!sp) return;
   const first=!s2.found.has(sp.id); s2.found.add(sp.id); chime();
   const n=s2.found.size;
-  showCard(`<div class="kicker">Discovery ${n} of ${SPOTS.length}${first?'':' (again)'}</div><div class="big">${sp.icon}</div><h2>${sp.title}</h2><p>${sp.text}</p>`,
-    [{label: n===SPOTS.length && first ? 'All found! Continue &rarr;' : 'Keep exploring', fn:()=>{ if(n===SPOTS.length){ $('landBtn').style.display='block'; hint(null);} }}]);
+  showCard(`<div class="kicker">${T.discovery(n,SPOTS.length,first)}</div><div class="big">${sp.icon}</div><h2>${sp.title}</h2><p>${sp.text}</p>`,
+    [{label: n===SPOTS.length && first ? T.allFound : T.keepExploring, fn:()=>{ if(n===SPOTS.length){ $('landBtn').style.display='block'; hint(null);} }}]);
 });
 function pickSpot(mx,my){
   let best=null,bd=1e9; for(const sp of SPOTS){const [x,y]=spotXY(sp); const d=Math.hypot(mx-x,my-y); if(d<spotR()*1.6&&d<bd){bd=d;best=sp;}} return best;
@@ -525,7 +671,7 @@ function pickSpot(mx,my){
 $('landBtn').onclick=()=>{audioInit(); beep(520,.08); $('landBtn').style.display='none'; startStage3();};
 function updateStage2(dt){
   s2.t+=dt;
-  setHUD('2 · Explore Eros', `<div class="chip"><small>Discoveries</small>${s2.found.size} / ${SPOTS.length}</div>`);
+  setHUD(T.hud2, `<div class="chip"><small>${T.hudDiscoveries}</small>${s2.found.size} / ${SPOTS.length}</div>`);
 }
 function drawStage2(t){
   bg(); drawStars(0,t);
@@ -552,7 +698,7 @@ function drawStage2(t){
       ctx.beginPath(); ctx.arc(x,y,r+pulse*r*.9,0,7); ctx.stroke();
       ctx.strokeStyle='#5ee0ff'; ctx.lineWidth=hv?4:2.5; ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.stroke();
       ctx.fillStyle='rgba(94,224,255,.15)'; ctx.fill();
-      ctx.fillStyle='#fff'; ctx.font=`800 ${Math.round(r)}px "Baloo 2"`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('?',x,y+1); ctx.textBaseline='alphabetic';
+      ctx.fillStyle='#fff'; ctx.font=`800 ${Math.round(r)}px "Baloo 2", Nunito`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('?',x,y+1); ctx.textBaseline='alphabetic';
     } else {
       ctx.fillStyle='rgba(93,242,154,.9)'; ctx.beginPath(); ctx.arc(x,y,r*.6,0,7); ctx.fill();
       ctx.strokeStyle='#0b2a18'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(x-r*.28,y); ctx.lineTo(x-r*.05,y+r*.24); ctx.lineTo(x+r*.3,y-r*.22); ctx.stroke();
@@ -586,11 +732,7 @@ function startStage3(){
   stage=3; clearMsgs(); hint(null); buildTerrain();
   $('pad').classList.toggle('show', isTouch);
   s3={x:70,y:START_ALT,vx:2.2,vy:-2.5,fuel:100,state:'fly',t:0,photos:0,lastPhoto:0,flash:0,thrust:false};
-  showCard(`<div class="kicker">Stage 3 of 3 · February 12, 2001</div><h2>Land on Eros</h2>
-    <p>NEAR was <b>never built to land</b> — but the team decided to try! Bring it down gently.</p>
-    <ul><li>${isTouch?'Hold <b>&#128293; Thrust</b>':'<b>&#9650;</b> (or Space)'} fires the thruster to slow down</li><li><b>&#9664; &#9654;</b> nudge sideways</li><li>Touch down in the <span style="color:#5df29a"><b>green zone</b></span> slower than <b>${SAFE_KMH} km/h</b></li></ul>
-    <p style="font-size:15px;color:#a9b4dd">Gravity on Eros is very weak, so we've sped up time to make it a challenge.</p>`,
-    [{label:'Begin descent ⬇️'}]);
+  showCard(T.s3Card(isTouch,num(SAFE_KMH,1)), [{label:T.s3Btn}]);
 }
 function updateStage3(dt){
   const S=s3; if(S.state!=='fly') return;
@@ -613,32 +755,28 @@ function updateStage3(dt){
   if(S.flash>0) S.flash-=dt;
   const alt=S.y-4-terH(S.x), spd=Math.hypot(S.vx,S.vy), kmh=spd*3.6;
   const col = kmh<=SAFE_KMH?'#5df29a':kmh<=15?'#ffc44d':'#ff6b6b';
-  setHUD('3 · Land on Eros',
-    `<div class="chip"><small>Speed</small><span style="color:${col}">${kmh.toFixed(1)} km/h</span></div>
-     <div class="chip"><small>Altitude</small>${Math.max(0,alt).toFixed(0)} m</div>
-     <div class="chip"><small>Fuel</small><span style="color:${S.fuel<20?'#ff6b6b':'inherit'}">${S.fuel.toFixed(0)}%</span></div>
-     <div class="chip"><small>Photos</small>📷 ${S.photos}/69</div>`);
+  setHUD(T.hud3,
+    `<div class="chip"><small>${T.hudSpeed}</small><span style="color:${col}">${num(kmh,1)} ${T.kmh}</span></div>
+     <div class="chip"><small>${T.hudAlt}</small>${Math.max(0,alt).toFixed(0)} ${T.m}</div>
+     <div class="chip"><small>${T.hudFuel}</small><span style="color:${S.fuel<20?'#ff6b6b':'inherit'}">${S.fuel.toFixed(0)}%</span></div>
+     <div class="chip"><small>${T.hudPhotos}</small>📷 ${S.photos}/69</div>`);
   if(alt<=0){
     setThrust(false);
     const z=TER.zone, inZone=S.x>=z.x0&&S.x<=z.x1;
     S.y=terH(S.x)+4;
     if(kmh<=SAFE_KMH && inZone){ S.state='won'; S.photos=69; chime(); setTimeout(()=>beep(1320,.3),220); setTimeout(()=>winCard(kmh),700); }
     else { S.state='crash'; S.crashKmh=kmh; beep(90,.5,'sawtooth',.12);
-      const why = kmh>SAFE_KMH ? `You hit the ground at <b>${kmh.toFixed(1)} km/h</b> — too fast! Hold &#9650; longer to slow down.` : `Nice and gentle at ${kmh.toFixed(1)} km/h, but you landed on bumpy, rocky ground. Aim for the <b>green zone</b>.`;
-      setTimeout(()=>showCard(`<div class="kicker">Mission control</div><h2>Oops! Let's try again</h2><p>${why}</p><p style="font-size:15px;color:#a9b4dd">Tip: slow down early, while you're still high up. Watch the speed turn green.</p>`,
-        [{label:'Try again ↻',fn:startStage3Quick},{label:'Back to start',ghost:true,fn:titleScreen}]),900);
+      const why = kmh>SAFE_KMH ? T.crashFast(num(kmh,1)) : T.crashRocky(num(kmh,1));
+      setTimeout(()=>showCard(T.crashCard(why),
+        [{label:T.tryAgain,fn:startStage3Quick},{label:T.backToStart,ghost:true,fn:titleScreen}]),900);
     }
   }
 }
 function startStage3Quick(){ buildTerrain(); s3={x:70,y:START_ALT,vx:2.2,vy:-2.5,fuel:100,state:'fly',t:0,photos:0,lastPhoto:0,flash:0,thrust:false}; }
 function winCard(kmh){
   $('pad').classList.remove('show');
-  showCard(`<div class="kicker">February 12, 2001 · Mission complete</div><div class="big">🏅</div><h2>You landed on Eros!</h2>
-    <p>Touchdown at <b>${kmh.toFixed(1)} km/h</b>. The real NEAR touched down at about <b>6.4 km/h</b> — slower than a jog!</p>
-    <ul><li>It was the <b>first spacecraft ever to land on an asteroid</b>.</li>
-    <li>It snapped <b>69 close-up photos</b> on the way down.</li>
-    <li>Even though it wasn't built to land, it survived and kept sending science for about <b>two weeks</b>.</li></ul>`,
-    [{label:'Play again ↻',fn:titleScreen},{label:'Land again',ghost:true,fn:startStage3}]);
+  showCard(T.winCard(num(kmh,1)),
+    [{label:T.playAgain,fn:titleScreen},{label:T.landAgain,ghost:true,fn:startStage3}]);
 }
 function drawStage3(t){
   const S=s3;
@@ -664,7 +802,7 @@ function drawStage3(t){
   ctx.fillStyle='rgba(93,242,154,.25)'; ctx.fillRect(X(z.x0),zy-4,(z.x1-z.x0)*sc,8);
   ctx.strokeStyle='#5df29a'; ctx.lineWidth=3; ctx.setLineDash([8,6]); ctx.beginPath(); ctx.moveTo(X(z.x0),zy); ctx.lineTo(X(z.x1),zy); ctx.stroke(); ctx.setLineDash([]);
   for(const fx of [z.x0,z.x1]){ ctx.strokeStyle='#ddd'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(X(fx),zy); ctx.lineTo(X(fx),zy-28); ctx.stroke(); ctx.fillStyle='#5df29a'; ctx.beginPath(); ctx.moveTo(X(fx),zy-28); ctx.lineTo(X(fx)+16,zy-22); ctx.lineTo(X(fx),zy-16); ctx.fill(); }
-  label(X((z.x0+z.x1)/2), zy+26, 'Landing zone · near Himeros');
+  label(X((z.x0+z.x1)/2), zy+26, T.zone);
   // guide line
   if(S.state==='fly'){ ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.setLineDash([3,6]); ctx.beginPath(); ctx.moveTo(X(S.x),Y(S.y)); ctx.lineTo(X(S.x),Y(terH(S.x))); ctx.stroke(); ctx.setLineDash([]); }
   // craft (rotated so panels face down-ish; flame downward)
@@ -682,7 +820,7 @@ function drawStage3(t){
     ctx.fillStyle='rgba(14,22,58,.85)'; ctx.fillRect(gx-6,gyy-6,30,gh+12);
     const sy=gyy+gh-gh*SAFE_KMH/max; ctx.fillStyle='rgba(93,242,154,.35)'; ctx.fillRect(gx,sy,18,gyy+gh-sy);
     const vy=gyy+gh-gh*clamp(kmh/max,0,1); ctx.fillStyle=kmh<=SAFE_KMH?'#5df29a':kmh<=15?'#ffc44d':'#ff6b6b'; ctx.fillRect(gx-4,vy-3,26,6);
-    ctx.save(); ctx.translate(gx-16,gyy+gh/2); ctx.rotate(-Math.PI/2); ctx.font='700 13px "Baloo 2"'; ctx.textAlign='center'; ctx.fillStyle='#a9b4dd'; ctx.fillText('SPEED',0,0); ctx.restore();
+    ctx.save(); ctx.translate(gx-16,gyy+gh/2); ctx.rotate(-Math.PI/2); ctx.font='700 13px "Baloo 2", Nunito'; ctx.textAlign='center'; ctx.fillStyle='#a9b4dd'; ctx.fillText(T.gaugeSpeed,0,0); ctx.restore();
   }
 }
 
@@ -691,11 +829,7 @@ function drawStage3(t){
 // =====================================================================
 function titleScreen(){
   stage=0; clearMsgs(); hint(null); setThrust(false); $('hud').style.display='none'; $('pad').classList.remove('show'); $('landBtn').style.display='none';
-  showCard(`<div class="kicker">A NASA-inspired space adventure</div><h1>Mission to Eros</h1>
-    <p>Fly the real <b>NEAR Shoemaker</b> spacecraft to a giant space rock, explore its craters and boulders, and try to <b>land on an asteroid</b> — just like NASA did in 2001!</p>
-    <p style="font-size:15px;color:#a9b4dd">3 stages · about 5 minutes · keyboard, mouse or touch</p>
-    <div class="jump">Demo shortcuts: <a href="#" data-j="2" style="color:#5ee0ff">Stage 2</a> · <a href="#" data-j="3" style="color:#5ee0ff">Stage 3</a></div>`,
-    [{label:'Start mission 🚀',fn:startStage1}]);
+  showCard(T.titleCard, [{label:T.startBtn,fn:startStage1}]);
   document.querySelectorAll('[data-j]').forEach(a=>a.onclick=e=>{e.preventDefault();audioInit();hideCard(); a.dataset.j==='2'?startStage2():startStage3();});
 }
 let titleT=0;
