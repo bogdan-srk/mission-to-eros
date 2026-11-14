@@ -36,7 +36,7 @@ const COVERS = [
     ctx.beginPath(); ctx.ellipse(W*.7,H*.56,W*.3,H*.3,-.3,0,7); ctx.stroke(); ctx.setLineDash([]);
     drawEros(W*.7,H*.56,W*.26,-.35,true);
     drawNEAR(W*.47,H*.25,34,.5,0);
-    pill('NASA · NEAR Shoemaker · 1996–2001',64,110);
+    pill('Real space mission · 1996–2001',64,110);
     title('Mission',60,250,128); title('to Eros',60,375,128,'left','#ffc44d');
     sub('Fly · Explore · Land on an asteroid',64,450,36);
   },
@@ -93,18 +93,25 @@ const COVERS = [
     ctx.beginPath(); ctx.ellipse(W*.5,H*.66,500,300,-1,0,7); ctx.stroke(); ctx.setLineDash([]);
     drawEros(W*.5,H*.66,440,-1,true);
     drawNEAR(W*.2,H*.52,56,.5,0);
-    pill('NASA · NEAR Shoemaker · 1996–2001',W/2,220,36,'center');
+    pill('Real space mission · 1996–2001',W/2,220,36,'center');
     title('Mission',W/2,450,200,'center'); title('to Eros',W/2,640,200,'center','#ffc44d');
     sub('Fly · Explore · Land on an asteroid',W/2,745,50,'center');
     sub('Play free in your browser',W/2,1810,46,'center','#ffc44d');
   }
 ];
 const SIZES = {6:[1080,1920]};
+// visible SI/AI disclosure required by the NASA Space Apps rules for generated images
+function watermark(){
+  const s=H>W?30:18, txt='🤖 Made with AI assistance';
+  ctx.font=F(700,s); const w=ctx.measureText(txt).width+s*1.2, h=s*1.7, x=W-w-s, y=H-h-s;
+  ctx.fillStyle='rgba(7,11,36,.75)'; ctx.beginPath(); ctx.roundRect(x,y,w,h,h/2); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.85)'; ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillText(txt,x+s*.6,y+h/2+1); ctx.textBaseline='alphabetic';
+}
 (async()=>{
   await Promise.all([document.fonts.load(F(800,80)), document.fonts.load('800 80px Nunito')]);
   const n=+new URLSearchParams(location.search).get('cover')||1;
   [W,H]=SIZES[n]||[1200,630]; cv.width=W; cv.height=H; ctx.setTransform(1,0,0,1,0,0); // exact size, whatever the window is
-  COVERS[n-1]();
+  COVERS[n-1](); watermark();
   // freeze the result: a later resize() would clear the canvas
   const img=new Image(); img.src=cv.toDataURL('image/png');
   img.style.cssText=`position:fixed;left:0;top:0;width:${W}px;height:${H}px;z-index:9`;
