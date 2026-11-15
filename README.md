@@ -2,7 +2,7 @@
 
 A free browser game for kids about NEAR Shoemaker, the first spacecraft to orbit an asteroid (433 Eros, 2000) and the first to land on one (2001).
 
-**Play:** https://bogdan-srk.github.io/mission-to-eros/ · Ukrainian version: [`?language=ua`](https://bogdan-srk.github.io/mission-to-eros/?language=ua)
+**Play:** https://bogdan-srk.github.io/mission-to-eros/ · Ukrainian: [`?language=ua`](https://bogdan-srk.github.io/mission-to-eros/?language=ua) · Japanese: [`?language=ja`](https://bogdan-srk.github.io/mission-to-eros/?language=ja)
 
 ![Mission to Eros cover](cover.png)
 
@@ -18,7 +18,7 @@ Three stages, about 5 minutes, works with keyboard, mouse or touch:
 
 - **One file, [index.html](index.html):** HTML, CSS and plain JavaScript, with no frameworks and no image or sound files.
 - **Graphics and sound:** all graphics are drawn in code with Canvas 2D; sound effects are generated with the Web Audio API.
-- **Languages:** English by default, Ukrainian with `?language=ua`.
+- **Languages:** English by default, Ukrainian with `?language=ua`, Japanese with `?language=ja`. The title screen has a language switch.
 - **Hosting and analytics:** hosted on GitHub Pages; visits are counted with GoatCounter, which uses no cookies.
 - **Share images:** [tools/covers/render.sh](tools/covers/render.sh) draws the share images with the game's own drawing code, using Bash, headless Google Chrome and Python.
 
@@ -31,7 +31,7 @@ This project was built with help from AI assistants: JetBrains Junie, and Claude
 | Area | What AI helped with |
 |---|---|
 | Coding, debugging, troubleshooting | Game code, the launch animation, analytics, the cover generator, link-preview fixes |
-| Writing, editing, translation | Game text and facts, the Ukrainian translation, this README |
+| Writing, editing, translation | Game text and facts, the Ukrainian and Japanese translations, this README |
 | Visual design and image creation | In-game art (drawn by AI-assisted code) and the share images `cover.png` / `cover-mobile.png` |
 | Research | Mission facts: dates, places, the Delta II rocket |
 | Ideation | Cover concepts, feature ideas |

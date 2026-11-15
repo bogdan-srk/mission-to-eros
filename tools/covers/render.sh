@@ -13,7 +13,7 @@ trap '[ -n "$SERVER" ] && kill "$SERVER" 2>/dev/null; rm -rf "$TMP"' EXIT
 
 # the game page with analytics off, UI hidden and the cover script injected
 sed -e "s#const GOATCOUNTER = '[^']*';#const GOATCOUNTER = '';#" \
-    -e 's#</body>#<style>\#overlay,\#hud,\#event,\#fact,\#hint,\#landBtn,\#pad{display:none!important}</style><script src="covers.js"></script></body>#' \
+    -e 's#</body>#<style>\#overlay,\#lang,\#hud,\#event,\#fact,\#hint,\#landBtn,\#pad{display:none!important}</style><script src="covers.js"></script></body>#' \
     "$ROOT/index.html" > "$TMP/covers.html"
 cp "$DIR/covers.js" "$TMP/"
 
